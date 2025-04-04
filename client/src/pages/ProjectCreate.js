@@ -6,290 +6,289 @@ import {
   Typography,
   TextField,
   Button,
-  Grid,
   Paper,
+  Grid,
+  CircularProgress,
   Alert,
   FormControlLabel,
   Switch,
 } from '@mui/material';
+import { Formik, Form, Field } from 'formik';
+import { projectSchema } from '../utils/validationSchemas';
+import FormError from '../components/forms/FormError';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 const ProjectCreate = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const { user } = useAuth();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const initialValues = {
     name: '',
     description: '',
     isPublic: false,
     tokenomics: {
-      blockchain: 'Ethereum',
       tokenName: '',
       tokenSymbol: '',
-      tokenDecimals: 18,
       totalSupply: '',
-      maxSupply: '',
       allocation: {
-        team: { percentage: 0, vestingPeriod: 0, cliff: 0 },
-        advisors: { percentage: 0, vestingPeriod: 0, cliff: 0 },
-        investors: { percentage: 0, vestingPeriod: 0, cliff: 0 },
-        community: { percentage: 0, vestingPeriod: 0, cliff: 0 },
-        treasury: { percentage: 0, vestingPeriod: 0, cliff: 0 },
-        marketing: { percentage: 0, vestingPeriod: 0, cliff: 0 },
-        liquidity: { percentage: 0, vestingPeriod: 0, cliff: 0 },
-      },
-      tokenSale: {
-        fundraisingAmount: 0,
-        tokenType: '',
-        acceptedCurrencies: [],
-        preSeedRoundDate: null,
-        seedRoundDate: null,
-        privateRoundDate: null,
-        publicRoundDate: null,
-        initialExchangeListingDate: null,
-      },
-      features: {
-        transactionFee: { enabled: false, percentage: 0 },
-        mintFunction: { enabled: false },
-        burnFunction: { enabled: false },
+        team: 0,
+        marketing: 0,
+        development: 0,
+        liquidity: 0,
+        treasury: 0,
+        community: 0,
+        advisors: 0,
+        partners: 0,
       },
     },
-  });
-  const [error, setError] = useState('');
-
-  const handleChange = (e) => {
-    const { name, value, checked } = e.target;
-    if (name === 'isPublic') {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: checked,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
   };
 
-  const handleTokenomicsChange = (section, field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      tokenomics: {
-        ...prev.tokenomics,
-        [section]: {
-          ...prev.tokenomics[section],
-          [field]: value,
-        },
-      },
-    }));
-  };
-
-  const handleAllocationChange = (category, field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      tokenomics: {
-        ...prev.tokenomics,
-        allocation: {
-          ...prev.tokenomics.allocation,
-          [category]: {
-            ...prev.tokenomics.allocation[category],
-            [field]: value,
-          },
-        },
-      },
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      const response = await axios.post('/api/projects', formData);
-      navigate(`/projects/${response.data.data._id}`);
+      setError('');
+      setLoading(true);
+      await axios.post('/api/projects', {
+        ...values,
+        userId: user.id,
+      });
+      navigate('/projects');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create project');
+      setError(err.response?.data?.message || 'Proje oluşturulamadı');
+    } finally {
+      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Create New Project
-      </Typography>
+    <Container maxWidth="md">
+      <Box sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Yeni Proje Oluştur
+        </Typography>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 4 }}>
-          {error}
-        </Alert>
-      )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-      <Paper sx={{ p: 3 }}>
-        <Box component="form" onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
-            {/* Basic Information */}
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Basic Information
-              </Typography>
-              <TextField
-                required
-                fullWidth
-                label="Project Name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Description"
-                name="description"
-                multiline
-                rows={4}
-                value={formData.description}
-                onChange={handleChange}
-                sx={{ mb: 2 }}
-              />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isPublic}
-                    onChange={handleChange}
-                    name="isPublic"
-                  />
-                }
-                label="Make project public"
-              />
-            </Grid>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Formik
+            initialValues={initialValues}
+            validationSchema={projectSchema}
+            onSubmit={handleSubmit}
+          >
+            {({ errors, touched, isSubmitting, values, setFieldValue }) => (
+              <Form>
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom>
+                      Temel Bilgiler
+                    </Typography>
+                  </Grid>
 
-            {/* Token Information */}
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Token Information
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    required
-                    fullWidth
-                    label="Token Name"
-                    value={formData.tokenomics.tokenName}
-                    onChange={(e) =>
-                      handleTokenomicsChange('tokenName', '', e.target.value)
-                    }
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    required
-                    fullWidth
-                    label="Token Symbol"
-                    value={formData.tokenomics.tokenSymbol}
-                    onChange={(e) =>
-                      handleTokenomicsChange('tokenSymbol', '', e.target.value)
-                    }
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    required
-                    fullWidth
-                    label="Total Supply"
-                    type="number"
-                    value={formData.tokenomics.totalSupply}
-                    onChange={(e) =>
-                      handleTokenomicsChange('totalSupply', '', e.target.value)
-                    }
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Max Supply"
-                    type="number"
-                    value={formData.tokenomics.maxSupply}
-                    onChange={(e) =>
-                      handleTokenomicsChange('maxSupply', '', e.target.value)
-                    }
-                  />
-                </Grid>
-              </Grid>
-            </Grid>
+                  <Grid item xs={12}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Proje Adı"
+                      name="name"
+                      error={touched.name && Boolean(errors.name)}
+                      helperText={touched.name && errors.name}
+                    />
+                  </Grid>
 
-            {/* Allocation */}
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Token Allocation
-              </Typography>
-              <Grid container spacing={2}>
-                {Object.entries(formData.tokenomics.allocation).map(
-                  ([category, data]) => (
-                    <Grid item xs={12} sm={6} md={4} key={category}>
-                      <Paper sx={{ p: 2 }}>
-                        <Typography variant="subtitle1" gutterBottom>
-                          {category.charAt(0).toUpperCase() + category.slice(1)}
-                        </Typography>
-                        <TextField
-                          fullWidth
-                          label="Percentage"
-                          type="number"
-                          value={data.percentage}
-                          onChange={(e) =>
-                            handleAllocationChange(
-                              category,
-                              'percentage',
-                              parseFloat(e.target.value)
-                            )
-                          }
-                          sx={{ mb: 1 }}
+                  <Grid item xs={12}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      multiline
+                      rows={4}
+                      label="Proje Açıklaması"
+                      name="description"
+                      error={touched.description && Boolean(errors.description)}
+                      helperText={touched.description && errors.description}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <FormControlLabel
+                      control={
+                        <Field
+                          as={Switch}
+                          name="isPublic"
+                          checked={values.isPublic}
+                          onChange={(e) => setFieldValue('isPublic', e.target.checked)}
                         />
-                        <TextField
-                          fullWidth
-                          label="Vesting Period (months)"
-                          type="number"
-                          value={data.vestingPeriod}
-                          onChange={(e) =>
-                            handleAllocationChange(
-                              category,
-                              'vestingPeriod',
-                              parseInt(e.target.value)
-                            )
-                          }
-                          sx={{ mb: 1 }}
-                        />
-                        <TextField
-                          fullWidth
-                          label="Cliff (months)"
-                          type="number"
-                          value={data.cliff}
-                          onChange={(e) =>
-                            handleAllocationChange(
-                              category,
-                              'cliff',
-                              parseInt(e.target.value)
-                            )
-                          }
-                        />
-                      </Paper>
-                    </Grid>
-                  )
-                )}
-              </Grid>
-            </Grid>
+                      }
+                      label="Projeyi Herkese Açık Yap"
+                    />
+                  </Grid>
 
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                >
-                  Create Project
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-        </Box>
-      </Paper>
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom>
+                      Token Bilgileri
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Token Adı"
+                      name="tokenomics.tokenName"
+                      error={touched.tokenomics?.tokenName && Boolean(errors.tokenomics?.tokenName)}
+                      helperText={touched.tokenomics?.tokenName && errors.tokenomics?.tokenName}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Token Sembolü"
+                      name="tokenomics.tokenSymbol"
+                      error={touched.tokenomics?.tokenSymbol && Boolean(errors.tokenomics?.tokenSymbol)}
+                      helperText={touched.tokenomics?.tokenSymbol && errors.tokenomics?.tokenSymbol}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Toplam Token Arzı"
+                      name="tokenomics.totalSupply"
+                      type="number"
+                      error={touched.tokenomics?.totalSupply && Boolean(errors.tokenomics?.totalSupply)}
+                      helperText={touched.tokenomics?.totalSupply && errors.tokenomics?.totalSupply}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom>
+                      Token Dağılımı (%)
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Takım"
+                      name="tokenomics.allocation.team"
+                      type="number"
+                      error={touched.tokenomics?.allocation?.team && Boolean(errors.tokenomics?.allocation?.team)}
+                      helperText={touched.tokenomics?.allocation?.team && errors.tokenomics?.allocation?.team}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Pazarlama"
+                      name="tokenomics.allocation.marketing"
+                      type="number"
+                      error={touched.tokenomics?.allocation?.marketing && Boolean(errors.tokenomics?.allocation?.marketing)}
+                      helperText={touched.tokenomics?.allocation?.marketing && errors.tokenomics?.allocation?.marketing}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Geliştirme"
+                      name="tokenomics.allocation.development"
+                      type="number"
+                      error={touched.tokenomics?.allocation?.development && Boolean(errors.tokenomics?.allocation?.development)}
+                      helperText={touched.tokenomics?.allocation?.development && errors.tokenomics?.allocation?.development}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Likidite"
+                      name="tokenomics.allocation.liquidity"
+                      type="number"
+                      error={touched.tokenomics?.allocation?.liquidity && Boolean(errors.tokenomics?.allocation?.liquidity)}
+                      helperText={touched.tokenomics?.allocation?.liquidity && errors.tokenomics?.allocation?.liquidity}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Hazine"
+                      name="tokenomics.allocation.treasury"
+                      type="number"
+                      error={touched.tokenomics?.allocation?.treasury && Boolean(errors.tokenomics?.allocation?.treasury)}
+                      helperText={touched.tokenomics?.allocation?.treasury && errors.tokenomics?.allocation?.treasury}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Topluluk"
+                      name="tokenomics.allocation.community"
+                      type="number"
+                      error={touched.tokenomics?.allocation?.community && Boolean(errors.tokenomics?.allocation?.community)}
+                      helperText={touched.tokenomics?.allocation?.community && errors.tokenomics?.allocation?.community}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="Danışmanlar"
+                      name="tokenomics.allocation.advisors"
+                      type="number"
+                      error={touched.tokenomics?.allocation?.advisors && Boolean(errors.tokenomics?.allocation?.advisors)}
+                      helperText={touched.tokenomics?.allocation?.advisors && errors.tokenomics?.allocation?.advisors}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      label="İş Ortakları"
+                      name="tokenomics.allocation.partners"
+                      type="number"
+                      error={touched.tokenomics?.allocation?.partners && Boolean(errors.tokenomics?.allocation?.partners)}
+                      helperText={touched.tokenomics?.allocation?.partners && errors.tokenomics?.allocation?.partners}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Button
+                      type="submit"
+                      fullWidth
+                      variant="contained"
+                      color="primary"
+                      size="large"
+                      disabled={isSubmitting || loading}
+                    >
+                      {loading ? <CircularProgress size={24} /> : 'Proje Oluştur'}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Form>
+            )}
+          </Formik>
+        </Paper>
+      </Box>
     </Container>
   );
 };

@@ -6,126 +6,138 @@ import {
   Typography,
   TextField,
   Button,
+  Paper,
   Link,
+  CircularProgress,
   Alert,
 } from '@mui/material';
+import { Formik, Form, Field } from 'formik';
+import { registerSchema } from '../utils/validationSchemas';
+import FormError from '../components/forms/FormError';
 import { useAuth } from '../context/AuthContext';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+  const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      await register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-      });
+      setError('');
+      setLoading(true);
+      await register(values.name, values.email, values.password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to register');
+      setError(err.response?.data?.message || 'Kayıt işlemi başarısız oldu');
+    } finally {
+      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container maxWidth="sm">
       <Box
         sx={{
-          marginTop: 8,
+          mt: 8,
+          mb: 4,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
         }}
       >
-        <Typography component="h1" variant="h5">
-          Sign up
-        </Typography>
-        {error && (
-          <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
-            {error}
-          </Alert>
-        )}
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="name"
-            label="Full Name"
-            name="name"
-            autoComplete="name"
-            autoFocus
-            value={formData.name}
-            onChange={handleChange}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="Email Address"
-            name="email"
-            autoComplete="email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label="Password"
-            type="password"
-            id="password"
-            autoComplete="new-password"
-            value={formData.password}
-            onChange={handleChange}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="confirmPassword"
-            label="Confirm Password"
-            type="password"
-            id="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
+        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+          <Typography component="h1" variant="h5" align="center" gutterBottom>
+            Kayıt Ol
+          </Typography>
+          
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Formik
+            initialValues={{
+              name: '',
+              email: '',
+              password: '',
+              confirmPassword: '',
+            }}
+            validationSchema={registerSchema}
+            onSubmit={handleSubmit}
           >
-            Sign Up
-          </Button>
-          <Box sx={{ textAlign: 'center' }}>
-            <Link component={RouterLink} to="/login" variant="body2">
-              {"Already have an account? Sign In"}
-            </Link>
-          </Box>
-        </Box>
+            {({ errors, touched, isSubmitting }) => (
+              <Form>
+                <Field
+                  as={TextField}
+                  fullWidth
+                  margin="normal"
+                  label="Ad Soyad"
+                  name="name"
+                  autoComplete="name"
+                  error={touched.name && Boolean(errors.name)}
+                  helperText={touched.name && errors.name}
+                />
+
+                <Field
+                  as={TextField}
+                  fullWidth
+                  margin="normal"
+                  label="E-posta"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  error={touched.email && Boolean(errors.email)}
+                  helperText={touched.email && errors.email}
+                />
+                
+                <Field
+                  as={TextField}
+                  fullWidth
+                  margin="normal"
+                  label="Şifre"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  error={touched.password && Boolean(errors.password)}
+                  helperText={touched.password && errors.password}
+                />
+
+                <Field
+                  as={TextField}
+                  fullWidth
+                  margin="normal"
+                  label="Şifre Tekrar"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  error={touched.confirmPassword && Boolean(errors.confirmPassword)}
+                  helperText={touched.confirmPassword && errors.confirmPassword}
+                />
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  disabled={isSubmitting || loading}
+                  sx={{ mt: 3, mb: 2 }}
+                >
+                  {loading ? <CircularProgress size={24} /> : 'Kayıt Ol'}
+                </Button>
+
+                <Box textAlign="center">
+                  <Link component={RouterLink} to="/login" variant="body2">
+                    Zaten hesabınız var mı? Giriş yapın
+                  </Link>
+                </Box>
+              </Form>
+            )}
+          </Formik>
+        </Paper>
       </Box>
     </Container>
   );

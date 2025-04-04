@@ -5,197 +5,211 @@ import {
   Typography,
   TextField,
   Button,
-  Grid,
   Paper,
+  Grid,
+  CircularProgress,
   Alert,
   Divider,
 } from '@mui/material';
+import { Formik, Form, Field } from 'formik';
+import { profileSchema, passwordChangeSchema } from '../utils/validationSchemas';
+import FormError from '../components/forms/FormError';
 import { useAuth } from '../context/AuthContext';
 
 const Profile = () => {
   const { user, updateProfile, updatePassword } = useAuth();
-  const [profileData, setProfileData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-  });
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
   const [profileError, setProfileError] = useState('');
-  const [profileSuccess, setProfileSuccess] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleProfileChange = (e) => {
-    setProfileData({
-      ...profileData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handlePasswordChange = (e) => {
-    setPasswordData({
-      ...passwordData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault();
+  const handleProfileSubmit = async (values, { setSubmitting }) => {
     try {
-      await updateProfile(profileData);
-      setProfileSuccess('Profile updated successfully');
       setProfileError('');
-    } catch (err) {
-      setProfileError(err.response?.data?.message || 'Failed to update profile');
       setProfileSuccess('');
+      setLoading(true);
+      await updateProfile(values.name, values.email);
+      setProfileSuccess('Profil başarıyla güncellendi');
+    } catch (err) {
+      setProfileError(err.response?.data?.message || 'Profil güncellenemedi');
+    } finally {
+      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordError('New passwords do not match');
-      return;
-    }
+  const handlePasswordSubmit = async (values, { resetForm, setSubmitting }) => {
     try {
-      await updatePassword({
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword,
-      });
-      setPasswordSuccess('Password updated successfully');
       setPasswordError('');
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-    } catch (err) {
-      setPasswordError(err.response?.data?.message || 'Failed to update password');
       setPasswordSuccess('');
+      setLoading(true);
+      await updatePassword(values.currentPassword, values.newPassword);
+      setPasswordSuccess('Şifre başarıyla güncellendi');
+      resetForm();
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || 'Şifre güncellenemedi');
+    } finally {
+      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Profile Settings
-      </Typography>
+    <Container maxWidth="md">
+      <Box sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Profil Ayarları
+        </Typography>
 
-      <Grid container spacing={4}>
-        {/* Profile Information */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Profile Information
-            </Typography>
-            {profileError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {profileError}
-              </Alert>
-            )}
-            {profileSuccess && (
-              <Alert severity="success" sx={{ mb: 2 }}>
-                {profileSuccess}
-              </Alert>
-            )}
-            <Box component="form" onSubmit={handleProfileSubmit}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="name"
-                label="Full Name"
-                name="name"
-                value={profileData.name}
-                onChange={handleProfileChange}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email Address"
-                name="email"
-                value={profileData.email}
-                onChange={handleProfileChange}
-              />
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3 }}
-              >
-                Update Profile
-              </Button>
-            </Box>
-          </Paper>
-        </Grid>
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={6}>
+            <Paper elevation={3} sx={{ p: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Profil Bilgileri
+              </Typography>
 
-        {/* Change Password */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Change Password
-            </Typography>
-            {passwordError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {passwordError}
-              </Alert>
-            )}
-            {passwordSuccess && (
-              <Alert severity="success" sx={{ mb: 2 }}>
-                {passwordSuccess}
-              </Alert>
-            )}
-            <Box component="form" onSubmit={handlePasswordSubmit}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="currentPassword"
-                label="Current Password"
-                type="password"
-                id="currentPassword"
-                value={passwordData.currentPassword}
-                onChange={handlePasswordChange}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="newPassword"
-                label="New Password"
-                type="password"
-                id="newPassword"
-                value={passwordData.newPassword}
-                onChange={handlePasswordChange}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="confirmPassword"
-                label="Confirm New Password"
-                type="password"
-                id="confirmPassword"
-                value={passwordData.confirmPassword}
-                onChange={handlePasswordChange}
-              />
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3 }}
+              {profileError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {profileError}
+                </Alert>
+              )}
+
+              {profileSuccess && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  {profileSuccess}
+                </Alert>
+              )}
+
+              <Formik
+                initialValues={{
+                  name: user?.name || '',
+                  email: user?.email || '',
+                }}
+                validationSchema={profileSchema}
+                onSubmit={handleProfileSubmit}
+                enableReinitialize
               >
-                Change Password
-              </Button>
-            </Box>
-          </Paper>
+                {({ errors, touched, isSubmitting }) => (
+                  <Form>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      margin="normal"
+                      label="Ad Soyad"
+                      name="name"
+                      error={touched.name && Boolean(errors.name)}
+                      helperText={touched.name && errors.name}
+                    />
+
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      margin="normal"
+                      label="E-posta"
+                      name="email"
+                      type="email"
+                      error={touched.email && Boolean(errors.email)}
+                      helperText={touched.email && errors.email}
+                    />
+
+                    <Button
+                      type="submit"
+                      fullWidth
+                      variant="contained"
+                      color="primary"
+                      size="large"
+                      disabled={isSubmitting || loading}
+                      sx={{ mt: 3 }}
+                    >
+                      {loading ? <CircularProgress size={24} /> : 'Profili Güncelle'}
+                    </Button>
+                  </Form>
+                )}
+              </Formik>
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Paper elevation={3} sx={{ p: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Şifre Değiştir
+              </Typography>
+
+              {passwordError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {passwordError}
+                </Alert>
+              )}
+
+              {passwordSuccess && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  {passwordSuccess}
+                </Alert>
+              )}
+
+              <Formik
+                initialValues={{
+                  currentPassword: '',
+                  newPassword: '',
+                  confirmNewPassword: '',
+                }}
+                validationSchema={passwordChangeSchema}
+                onSubmit={handlePasswordSubmit}
+              >
+                {({ errors, touched, isSubmitting }) => (
+                  <Form>
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      margin="normal"
+                      label="Mevcut Şifre"
+                      name="currentPassword"
+                      type="password"
+                      error={touched.currentPassword && Boolean(errors.currentPassword)}
+                      helperText={touched.currentPassword && errors.currentPassword}
+                    />
+
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      margin="normal"
+                      label="Yeni Şifre"
+                      name="newPassword"
+                      type="password"
+                      error={touched.newPassword && Boolean(errors.newPassword)}
+                      helperText={touched.newPassword && errors.newPassword}
+                    />
+
+                    <Field
+                      as={TextField}
+                      fullWidth
+                      margin="normal"
+                      label="Yeni Şifre Tekrar"
+                      name="confirmNewPassword"
+                      type="password"
+                      error={touched.confirmNewPassword && Boolean(errors.confirmNewPassword)}
+                      helperText={touched.confirmNewPassword && errors.confirmNewPassword}
+                    />
+
+                    <Button
+                      type="submit"
+                      fullWidth
+                      variant="contained"
+                      color="primary"
+                      size="large"
+                      disabled={isSubmitting || loading}
+                      sx={{ mt: 3 }}
+                    >
+                      {loading ? <CircularProgress size={24} /> : 'Şifreyi Güncelle'}
+                    </Button>
+                  </Form>
+                )}
+              </Formik>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
+      </Box>
     </Container>
   );
 };
