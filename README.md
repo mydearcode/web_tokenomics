@@ -19,6 +19,8 @@ tokenomics-web/
 │       └── index.js        # Giriş noktası
 └── server/                 # Node.js backend
     ├── middleware/         # Middleware fonksiyonları
+    │   ├── auth.js         # Kimlik doğrulama middleware'i
+    │   └── projectAccess.js # Proje erişim kontrolü middleware'i
     ├── models/             # Mongoose modelleri
     ├── routes/             # API rotaları
     └── server.js           # Sunucu başlatma dosyası
@@ -38,6 +40,34 @@ tokenomics-web/
 - **MongoDB & Mongoose**: Veritabanı ve ODM
 - **JWT**: Kimlik doğrulama için
 - **Bcrypt**: Şifre hashleme için
+
+## Özellikler
+
+### Token Ekonomisi Yönetimi
+- Token dağılımı tasarımı ve düzenleme
+- Kategori bazlı token allocation
+- Özelleştirilebilir token bilgileri (isim, sembol, toplam arz)
+
+### Vesting Çizelgesi
+- Kategori bazlı vesting ayarları
+- TGE (Token Generation Event) yüzdesi ayarlama
+- Cliff ve vesting süresi yapılandırma
+- Aylık vesting dağılımı görselleştirme
+
+### Proje Yönetimi
+- Proje oluşturma ve düzenleme
+- Proje detayları görüntüleme
+- Proje görünürlük kontrolü (public/private)
+
+### İşbirlikçi Sistemi
+- Proje işbirlikçisi ekleme/çıkarma
+- Rol tabanlı erişim kontrolü (owner, editor, viewer)
+- İşbirlikçiler için yetki yönetimi
+
+### Kullanıcı Arayüzü
+- Responsive tasarım
+- Accordion ile gelişmiş vesting görünümü
+- Doğru milestone numaralandırma
 
 ## Geliştirme Süreci
 
@@ -87,6 +117,23 @@ tokenomics-web/
   - `Navbar.js`: Navigasyon çubuğu
   - `Footer.js`: Alt bilgi
 
+## Son Eklenen Özellikler
+
+### İşbirliği Sistemi
+- Projelere işbirlikçi ekleme ve yönetme
+- İşbirlikçi rolleri: editor ve viewer
+- Rol bazlı erişim kontrolü
+
+### Düzenleme Yetkisi Kontrolü
+- Editor rolüne sahip kullanıcılar projeyi düzenleyebilir
+- Viewer rolüne sahip kullanıcılar sadece görüntüleyebilir
+- Proje sahibi tüm yetkilere sahiptir
+
+### UX İyileştirmeleri
+- Vesting tabloları için Accordion bileşeni eklendi
+- Milestone numaralandırma sorunu çözüldü (M1, M2, M3... sıralaması)
+- Form doğrulama ve hata mesajları iyileştirildi
+
 ## Veri Modelleri
 
 ### User Model
@@ -106,20 +153,38 @@ tokenomics-web/
   name: String,
   description: String,
   owner: ObjectId,
-  collaborators: [ObjectId],
+  collaborators: [{
+    user: ObjectId,
+    role: String  // "editor" veya "viewer"
+  }],
   tokenomics: {
     tokenName: String,
     tokenSymbol: String,
     totalSupply: Number,
     allocation: {
-      team: Number,
-      investors: Number,
-      community: Number,
-      treasury: Number,
-      marketing: Number,
-      development: Number
+      team: {
+        percentage: Number,
+        amount: Number
+      },
+      investors: {
+        percentage: Number,
+        amount: Number
+      },
+      // Diğer kategoriler...
+    }
+  },
+  vesting: {
+    team: {
+      tgePercentage: Number,
+      cliffMonths: Number,
+      vestingMonths: Number
     },
-    // Diğer tokenomics alanları...
+    investors: {
+      tgePercentage: Number,
+      cliffMonths: Number,
+      vestingMonths: Number
+    },
+    // Diğer kategoriler...
   },
   isPublic: Boolean,
   createdAt: Date,
@@ -142,6 +207,7 @@ tokenomics-web/
 - `DELETE /api/projects/:id`: Proje sil
 - `POST /api/projects/:id/collaborators`: İşbirlikçi ekle
 - `DELETE /api/projects/:id/collaborators/:userId`: İşbirlikçi kaldır
+- `GET /api/projects/:id/check-access`: Proje erişim kontrolü
 - `PATCH /api/projects/:id/visibility`: Görünürlüğü değiştir
 
 ### Kullanıcılar
@@ -159,14 +225,92 @@ tokenomics-web/
 - CORS yapılandırması
 - Hata mesajlarında hassas bilgilerin gizlenmesi
 
-## Dağıtım
-- Frontend: React uygulaması build edilir ve statik dosyalar sunulur
-- Backend: Node.js uygulaması production modunda çalıştırılır
-- Veritabanı: MongoDB bağlantısı production URI ile yapılandırılır
+## Yapılacaklar Listesi
 
-## Gelecek Geliştirmeler
-- Form doğrulama ve hata işleme geliştirmeleri
-- Daha gelişmiş UI/UX özellikleri
-- Token fiyat simülasyonu
-- Çoklu dil desteği
-- Mobil uygulama 
+### 1. Deploy ve Hosting Yapısı
+- **Uygun Hosting Platformu Seçimi**
+  - Heroku, AWS, DigitalOcean veya Vercel gibi platformların değerlendirilmesi
+  - Ölçeklenebilirlik gereksinimlerinin belirlenmesi
+  - Maliyet-performans analizi
+
+- **Veritabanı Hizmeti**
+  - MongoDB Atlas veya AWS DocumentDB gibi hizmetlerin değerlendirilmesi
+  - Yedekleme ve kurtarma stratejilerinin planlanması
+  - Veritabanı performans optimizasyonu
+
+- **CI/CD Pipeline Kurulumu**
+  - GitHub Actions veya benzeri araçlarla otomatik deploy
+  - Test, build ve deploy süreçlerinin otomasyonu
+  - Sürüm kontrolü ve rollback stratejileri
+
+- **Domain ve SSL Yapılandırması**
+  - Domain adı seçimi ve yapılandırması
+  - SSL sertifikası ile güvenli bağlantı
+  - CDN entegrasyonu
+
+### 2. UX Odaklı İyileştirmeler
+
+- **Kullanıcı Arayüzü**
+  - Karanlık mod desteği
+  - Responsive tasarım geliştirmeleri
+  - Tutarlı renk şeması ve tipografi
+  - Animasyon ve geçiş efektleri
+
+- **Kullanıcı Deneyimi**
+  - Sürükle-bırak arayüz elemanları
+  - İnteraktif grafik ve tablolar
+  - Form doğrulama ve kullanıcı geri bildirimleri
+  - Tutorial ve yardım metinleri
+
+- **Performans İyileştirmeleri**
+  - Sayfa yükleme süresi optimizasyonu
+  - Büyük veri setleri için sanal kaydırma
+  - İmaj optimizasyonu
+
+- **Erişilebilirlik**
+  - Klavye navigasyonu ve odak yönetimi
+  - ARIA etiketleri ve rolleri
+  - Renk kontrastı iyileştirmeleri
+  - Ekran okuyucu uyumluluğu
+
+## Geliştirme Ortamı Kurulumu
+
+1. Repoyu klonlayın:
+   ```bash
+   git clone <repo-url>
+   ```
+
+2. Bağımlılıkları yükleyin:
+   ```bash
+   # Backend bağımlılıkları
+   cd server
+   npm install
+
+   # Frontend bağımlılıkları
+   cd ../client
+   npm install
+   ```
+
+3. Backend için `.env` dosyası oluşturun:
+   ```
+   JWT_SECRET=your_jwt_secret
+   MONGODB_URI=mongodb://localhost:27017/tokenomics-web
+   ```
+
+4. Uygulamayı başlatın:
+   ```bash
+   # Backend
+   cd server
+   npm run dev
+
+   # Frontend
+   cd ../client
+   npm start
+   ```
+
+## Katkıda Bulunma
+1. Repoyu forklayın
+2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
+3. Değişikliklerinizi commit edin (`git commit -m 'Add some amazing feature'`)
+4. Branch'inizi push edin (`git push origin feature/amazing-feature`)
+5. Pull Request açın 

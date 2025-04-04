@@ -53,6 +53,7 @@ Frontend, modern React uygulaması mimarisi kullanılarak geliştirilmiştir:
 3. **Yönlendirme**:
    - React Router kullanılarak sayfa yönlendirmesi sağlanmıştır
    - PrivateRoute bileşeni ile korumalı rotalar tanımlanmıştır
+   - EditorRoute bileşeni ile düzenleme yetkisi kontrolü yapılmıştır
    - Dinamik rotalar için URL parametreleri kullanılmıştır
 
 4. **API İletişimi**:
@@ -64,6 +65,16 @@ Frontend, modern React uygulaması mimarisi kullanılarak geliştirilmiştir:
    - Chart.js ve React-Chartjs-2 kullanılarak grafikler oluşturulmuştur
    - TokenAllocationChart bileşeni, token dağılımını pasta grafik ile gösterir
    - Grafikler responsive tasarıma uygun olarak yapılandırılmıştır
+
+6. **İşbirliği ve Yetkilendirme**:
+   - Projeler için işbirliği sistemi eklenmiştir
+   - Rol tabanlı erişim kontrolü: Owner, Editor ve Viewer rolleri
+   - Proje düzenleme yetkileri için özel kontroller
+
+7. **Kullanıcı Deneyimi İyileştirmeleri**:
+   - Vesting tabloları için Accordion bileşeni kullanılmıştır
+   - Milestone numaralandırma sorunu çözülmüştür
+   - Responsive tasarım ve kullanıcı arayüzü iyileştirmeleri
 
 ## Geliştirme Süreci Detayları
 
@@ -106,6 +117,7 @@ Frontend, modern React uygulaması mimarisi kullanılarak geliştirilmiştir:
 1. **Kimlik Doğrulama**:
    - `AuthContext.js`: Kullanıcı durumu, token yönetimi ve kimlik doğrulama işlemleri
    - `PrivateRoute.js`: Korumalı rotalar için yönlendirme kontrolü
+   - `EditorRoute.js`: Düzenleme yetkisi kontrolü
 
 2. **Sayfa Bileşenleri**:
    - Form işleme, veri doğrulama ve API istekleri
@@ -116,6 +128,16 @@ Frontend, modern React uygulaması mimarisi kullanılarak geliştirilmiştir:
    - Chart.js yapılandırması ve özelleştirme
    - Veri dönüşümü ve görselleştirme
    - Etkileşimli grafik özellikleri
+
+4. **İşbirliği Sistemi**:
+   - İşbirlikçi ekleme/kaldırma arayüzü
+   - Rol tabanlı erişim kontrolü
+   - Proje paylaşım özellikleri
+
+5. **UX İyileştirmeleri**:
+   - Vesting tabloları için açılır-kapanır görünüm (Accordion)
+   - Milestone numaralandırma optimizasyonu
+   - Kullanıcı geri bildirimi ve hata mesajları geliştirmeleri
 
 ## Teknik Kararlar ve Gerekçeleri
 
@@ -138,6 +160,10 @@ Frontend, modern React uygulaması mimarisi kullanılarak geliştirilmiştir:
    - Hafif ve performanslı grafik kütüphanesi
    - Özelleştirilebilir ve responsive grafikler
    - Zengin dokümantasyon ve topluluk desteği
+
+5. **JavaScript-Tipi Dönüşümleri**:
+   - Milestone numaralandırma sorununu çözmek için `Number()` ile tip dönüşümü yapıldı
+   - String ve sayı tipindeki verilerin doğru şekilde işlenmesi sağlandı
 
 ## Güvenlik Önlemleri
 
@@ -167,6 +193,7 @@ Frontend, modern React uygulaması mimarisi kullanılarak geliştirilmiştir:
    - Bileşen render optimizasyonu
    - Lazy loading ve code splitting
    - Grafik render performansı optimizasyonu
+   - Accordion kullanarak vesting tablolarının performansını artırma
 
 ## Test Stratejisi
 
@@ -197,29 +224,69 @@ Frontend, modern React uygulaması mimarisi kullanılarak geliştirilmiştir:
    - Otomatik test ve build süreçleri
    - Otomatik dağıtım ve deployment
 
-## Gelecek Geliştirmeler
+## Yapılacaklar Listesi
 
-1. **Form Doğrulama ve Hata İşleme**:
-   - Formik veya React Hook Form entegrasyonu
-   - Yup veya Zod ile şema doğrulama
-   - Gelişmiş hata mesajları ve kullanıcı geri bildirimi
+### 1. Deploy ve Hosting Yapısı
+   - **Uygun Hosting Platformu Seçimi**:
+     - Heroku: Kolay deploy süreci, otomatik CI/CD
+     - AWS: EC2, ECS veya Elastic Beanstalk seçenekleri
+     - DigitalOcean: App Platform veya Droplet çözümleri
+     - Vercel: Frontend için optimize deployment
+   
+   - **Veritabanı Hizmeti**:
+     - MongoDB Atlas: Bulut tabanlı MongoDB hizmeti
+     - AWS DocumentDB: MongoDB uyumlu yönetilen veritabanı
+     - Kendi sunucumuzda MongoDB kurulumu
 
-2. **UI/UX İyileştirmeleri**:
-   - Tema özelleştirme ve karanlık mod
-   - Animasyonlar ve geçiş efektleri
-   - Erişilebilirlik (a11y) iyileştirmeleri
+   - **CI/CD Pipeline Kurulumu**:
+     - GitHub Actions: Otomatik test, build ve deploy işlemleri
+     - Travis CI veya CircleCI: Alternatif CI/CD çözümleri
+     - Docker container'ları ile dağıtım otomasyonu
 
-3. **Token Fiyat Simülasyonu**:
-   - Token ekonomisi modelleme
-   - Fiyat tahmin algoritmaları
-   - Simülasyon grafikleri ve raporlar
+   - **Ortam Yönetimi**:
+     - Development, staging ve production ortamları
+     - Environment değişkenleri yönetimi
+     - Secrets ve API anahtarları yönetimi
 
-4. **Çoklu Dil Desteği**:
-   - i18next entegrasyonu
-   - Dil dosyaları ve çeviriler
-   - Dil değiştirme arayüzü
+### 2. UX Odaklı İyileştirmeler
 
-5. **Mobil Uygulama**:
-   - React Native ile cross-platform mobil uygulama
-   - Mobil özel UI/UX tasarımı
-   - Push bildirimleri ve offline mod 
+   - **Kullanıcı Arayüzü**:
+     - Karanlık mod desteği
+     - Özelleştirilebilir temalar
+     - Mobil uyumlu tasarım iyileştirmeleri
+     - Animasyon ve geçiş efektleri
+
+   - **Kullanıcı Deneyimi**:
+     - Sürükle-bırak arayüz elemanları
+     - Vesting grafiği interaktif görselleştirme
+     - Form doğrulama ve kullanıcı geri bildirimleri
+     - Yardım metinleri ve ipuçları
+
+   - **Performans İyileştirmeleri**:
+     - Sayfa yükleme süresi optimizasyonu
+     - API isteklerinin önbelleğe alınması
+     - Büyük veri setleri için sanal kaydırma
+     - Image lazy loading ve optimizasyon
+
+   - **Erişilebilirlik (a11y)**:
+     - Klavye navigasyonu iyileştirmeleri 
+     - ARIA etiketleri ve rollerinin eklenmesi
+     - Ekran okuyucu uyumluluğu
+     - Renk kontrastı ve okunabilirlik iyileştirmeleri
+
+### 3. Gelecek Planları
+
+   - **Token Ekonomisi Modelleme**:
+     - Token ekonomisi simülasyonu
+     - Fiyat tahmin modelleri
+     - Ekonomik parametre optimizasyonu
+
+   - **Çoklu Dil Desteği**:
+     - i18next entegrasyonu
+     - Çeviri dosyaları ve arayüzü
+     - Otomatik dil algılama
+
+   - **Rapor ve Analiz**:
+     - PDF rapor oluşturma
+     - Token ekonomisi analiz araçları
+     - Karşılaştırmalı proje analizi 
