@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -10,41 +10,60 @@ import {
   Menu,
   MenuItem,
   Avatar,
+  Divider,
+  useMediaQuery,
   useTheme,
-  useMediaQuery
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   Add as AddIcon,
   Person as PersonIcon,
-  Logout as LogoutIcon
+  ExitToApp as LogoutIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
 const Navbar = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [anchorEl, setAnchorEl] = React.useState(null);
-
-  const handleMenu = (event) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [mobileMenuAnchorEl, setMobileMenuAnchorEl] = useState(null);
+  
+  const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
-
-  const handleClose = () => {
+  
+  const handleMobileMenuOpen = (event) => {
+    setMobileMenuAnchorEl(event.currentTarget);
+  };
+  
+  const handleMenuClose = () => {
     setAnchorEl(null);
   };
-
-  const handleLogout = () => {
-    logout();
-    handleClose();
-    navigate('/');
+  
+  const handleMobileMenuClose = () => {
+    setMobileMenuAnchorEl(null);
   };
-
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+  
+  const isActive = (path) => {
+    return location.pathname === path;
+  };
+  
   return (
-    <AppBar position="static">
+    <AppBar position="sticky" color="default" elevation={1}>
       <Toolbar>
         <Typography
           variant="h6"
@@ -53,12 +72,15 @@ const Navbar = () => {
           sx={{
             flexGrow: 1,
             textDecoration: 'none',
-            color: 'inherit'
+            color: 'primary.main',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
           }}
         >
           Tokenomics Web
         </Typography>
-
+        
         {user ? (
           <>
             {isMobile ? (
@@ -67,103 +89,143 @@ const Navbar = () => {
                   edge="end"
                   color="inherit"
                   aria-label="menu"
-                  onClick={handleMenu}
+                  onClick={handleMobileMenuOpen}
                 >
                   <MenuIcon />
                 </IconButton>
                 <Menu
-                  anchorEl={anchorEl}
-                  open={Boolean(anchorEl)}
-                  onClose={handleClose}
+                  anchorEl={mobileMenuAnchorEl}
+                  open={Boolean(mobileMenuAnchorEl)}
+                  onClose={handleMobileMenuClose}
+                  PaperProps={{
+                    sx: { width: 220, mt: 1.5 },
+                  }}
                 >
                   <MenuItem
                     component={RouterLink}
-                    to="/dashboard"
-                    onClick={handleClose}
+                    to="/"
+                    onClick={handleMobileMenuClose}
+                    selected={isActive('/')}
                   >
-                    <DashboardIcon sx={{ mr: 1 }} />
+                    <DashboardIcon sx={{ mr: 2 }} />
                     Dashboard
                   </MenuItem>
                   <MenuItem
                     component={RouterLink}
                     to="/projects/create"
-                    onClick={handleClose}
+                    onClick={handleMobileMenuClose}
                   >
-                    <AddIcon sx={{ mr: 1 }} />
+                    <AddIcon sx={{ mr: 2 }} />
                     New Project
                   </MenuItem>
+                  <Divider />
                   <MenuItem
                     component={RouterLink}
                     to="/profile"
-                    onClick={handleClose}
+                    onClick={handleMobileMenuClose}
+                    selected={isActive('/profile')}
                   >
-                    <PersonIcon sx={{ mr: 1 }} />
+                    <PersonIcon sx={{ mr: 2 }} />
                     Profile
                   </MenuItem>
                   <MenuItem onClick={handleLogout}>
-                    <LogoutIcon sx={{ mr: 1 }} />
+                    <LogoutIcon sx={{ mr: 2 }} />
                     Logout
                   </MenuItem>
                 </Menu>
               </>
             ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Button
-                  color="inherit"
-                  component={RouterLink}
-                  to="/dashboard"
-                  startIcon={<DashboardIcon />}
-                >
-                  Dashboard
-                </Button>
-                <Button
-                  color="inherit"
-                  component={RouterLink}
-                  to="/projects/create"
-                  startIcon={<AddIcon />}
-                >
-                  New Project
-                </Button>
+              <>
+                <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                  <Button
+                    component={RouterLink}
+                    to="/"
+                    color="inherit"
+                    sx={{
+                      mx: 1,
+                      fontWeight: isActive('/') ? 700 : 400,
+                      borderBottom: isActive('/') ? '2px solid' : 'none',
+                      borderColor: 'primary.main',
+                      borderRadius: 0,
+                    }}
+                  >
+                    Dashboard
+                  </Button>
+                  <Button
+                    component={RouterLink}
+                    to="/projects/create"
+                    color="inherit"
+                    startIcon={<AddIcon />}
+                    sx={{ mx: 1 }}
+                  >
+                    New Project
+                  </Button>
+                </Box>
+                
                 <IconButton
-                  color="inherit"
-                  component={RouterLink}
-                  to="/profile"
+                  onClick={handleMenuOpen}
+                  size="small"
+                  sx={{ ml: 2 }}
+                  aria-controls={Boolean(anchorEl) ? 'account-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={Boolean(anchorEl) ? 'true' : undefined}
                 >
                   <Avatar
                     sx={{
                       width: 32,
                       height: 32,
-                      bgcolor: theme.palette.secondary.main
+                      bgcolor: 'primary.main',
                     }}
                   >
-                    {user.name.charAt(0)}
+                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                   </Avatar>
                 </IconButton>
-                <Button
-                  color="inherit"
-                  onClick={logout}
-                  startIcon={<LogoutIcon />}
+                <Menu
+                  anchorEl={anchorEl}
+                  id="account-menu"
+                  open={Boolean(anchorEl)}
+                  onClose={handleMenuClose}
+                  onClick={handleMenuClose}
+                  PaperProps={{
+                    sx: { width: 220, mt: 1.5 },
+                  }}
+                  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                 >
-                  Logout
-                </Button>
-              </Box>
+                  <MenuItem
+                    component={RouterLink}
+                    to="/profile"
+                    selected={isActive('/profile')}
+                  >
+                    <PersonIcon sx={{ mr: 2 }} />
+                    Profile
+                  </MenuItem>
+                  <MenuItem onClick={handleLogout}>
+                    <LogoutIcon sx={{ mr: 2 }} />
+                    Logout
+                  </MenuItem>
+                </Menu>
+              </>
             )}
           </>
         ) : (
           <Box>
             <Button
-              color="inherit"
               component={RouterLink}
               to="/login"
+              color="inherit"
+              sx={{ mx: 1 }}
             >
               Login
             </Button>
             <Button
-              color="inherit"
               component={RouterLink}
               to="/register"
+              variant="contained"
+              color="primary"
+              sx={{ mx: 1 }}
             >
-              Register
+              Sign Up
             </Button>
           </Box>
         )}

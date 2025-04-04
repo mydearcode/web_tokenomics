@@ -1,109 +1,111 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Box, CircularProgress } from '@mui/material';
-import { useAuth } from './context/AuthContext';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider, CssBaseline, Box } from '@mui/material';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import theme from './theme';
 
-// Layout components
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
-import PrivateRoute from './components/routing/PrivateRoute';
-
-// Page components
-import Home from './pages/Home';
+// Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import ProjectList from './pages/ProjectList';
+import Profile from './pages/Profile';
 import ProjectCreate from './pages/ProjectCreate';
 import ProjectEdit from './pages/ProjectEdit';
-import ProjectView from './pages/ProjectView';
-import Profile from './pages/Profile';
+import ProjectDetails from './pages/ProjectDetails';
 import NotFound from './pages/NotFound';
 
-function App() {
-  const { loading } = useAuth();
+// Components
+import Navbar from './components/layout/Navbar';
+import Footer from './components/layout/Footer';
 
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
   if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
-        <CircularProgress />
-      </Box>
-    );
+    return <div>Loading...</div>;
   }
+  
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  return children;
+};
 
+function App() {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100vh',
-      }}
-    >
-      <Navbar />
-      <Box component="main" sx={{ flexGrow: 1 }}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/projects"
-            element={
-              <PrivateRoute>
-                <ProjectList />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/projects/create"
-            element={
-              <PrivateRoute>
-                <ProjectCreate />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/projects/:id"
-            element={
-              <PrivateRoute>
-                <ProjectView />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/projects/:id/edit"
-            element={
-              <PrivateRoute>
-                <ProjectEdit />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <PrivateRoute>
-                <Profile />
-              </PrivateRoute>
-            }
-          />
-          <Route path="/404" element={<NotFound />} />
-          <Route path="*" element={<Navigate to="/404" replace />} />
-        </Routes>
-      </Box>
-      <Footer />
-    </Box>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <Router>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: '100vh',
+            }}
+          >
+            <Navbar />
+            <Box
+              component="main"
+              sx={{
+                flexGrow: 1,
+                py: 3,
+                backgroundColor: 'background.default',
+              }}
+            >
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/projects/create"
+                  element={
+                    <ProtectedRoute>
+                      <ProjectCreate />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/projects/:id/edit"
+                  element={
+                    <ProtectedRoute>
+                      <ProjectEdit />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/projects/:id"
+                  element={
+                    <ProtectedRoute>
+                      <ProjectDetails />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Box>
+            <Footer />
+          </Box>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
