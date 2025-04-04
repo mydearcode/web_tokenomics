@@ -13,8 +13,8 @@ import {
 } from '@mui/material';
 import { Formik, Form, Field } from 'formik';
 import { loginSchema } from '../utils/validationSchemas';
-import FormError from '../components/forms/FormError';
 import { useAuth } from '../context/AuthContext';
+import { login as loginApi } from '../services/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -26,8 +26,9 @@ const Login = () => {
     try {
       setError('');
       setLoading(true);
-      await login(values.email, values.password);
-      navigate('/dashboard');
+      const data = await loginApi(values.email, values.password);
+      login(data.token, data.user);
+      navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     } finally {

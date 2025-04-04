@@ -13,7 +13,7 @@ import {
   Alert,
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
-import axios from 'axios';
+import { getProjects } from '../services/api';
 
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
@@ -22,12 +22,20 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchProjects = async () => {
+      console.log('Dashboard: Fetching projects...');
       try {
-        const response = await axios.get('/api/projects');
-        setProjects(response.data.data);
+        const response = await getProjects();
+        console.log('Dashboard: Projects fetched successfully:', response);
+        setProjects(response.data || []);
         setLoading(false);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch projects');
+        console.error('Dashboard: Error fetching projects:', err);
+        // If the error is due to no projects, show a friendly message
+        if (err.response?.status === 404) {
+          setError('No projects found. Create your first project to get started!');
+        } else {
+          setError('Unable to load projects. Please try again later.');
+        }
         setLoading(false);
       }
     };
@@ -65,7 +73,7 @@ const Dashboard = () => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 4 }}>
+        <Alert severity="info" sx={{ mb: 4 }}>
           {error}
         </Alert>
       )}
@@ -100,31 +108,25 @@ const Dashboard = () => {
                 }}
               >
                 <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h5" component="h2">
+                  <Typography variant="h6" component="h2" gutterBottom>
                     {project.name}
                   </Typography>
-                  <Typography color="text.secondary">
-                    {project.description || 'No description provided'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                    Token: {project.tokenomics.tokenSymbol}
-                  </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Total Supply: {project.tokenomics.totalSupply.toLocaleString()}
+                    {project.description}
                   </Typography>
                 </CardContent>
                 <CardActions>
                   <Button
-                    size="small"
                     component={RouterLink}
                     to={`/projects/${project._id}`}
+                    size="small"
                   >
                     View Details
                   </Button>
                   <Button
-                    size="small"
                     component={RouterLink}
                     to={`/projects/${project._id}/edit`}
+                    size="small"
                   >
                     Edit
                   </Button>

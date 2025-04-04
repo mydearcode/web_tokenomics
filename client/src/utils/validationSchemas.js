@@ -41,60 +41,58 @@ export const projectSchema = Yup.object().shape({
     .max(1000, 'Project description cannot exceed 1000 characters')
     .required('Project description is required'),
   isPublic: Yup.boolean(),
-  tokenomics: Yup.object().shape({
-    tokenName: Yup.string()
-      .min(2, 'Token name must be at least 2 characters')
-      .max(50, 'Token name cannot exceed 50 characters')
-      .required('Token name is required'),
-    tokenSymbol: Yup.string()
-      .min(2, 'Token symbol must be at least 2 characters')
-      .max(10, 'Token symbol cannot exceed 10 characters')
-      .required('Token symbol is required'),
-    totalSupply: Yup.number()
-      .min(1, 'Total supply must be greater than 0')
-      .required('Total supply is required'),
-    allocation: Yup.object().shape({
-      team: Yup.number()
-        .min(0, 'Team allocation cannot be negative')
-        .max(100, 'Team allocation cannot exceed 100%')
-        .required('Team allocation is required'),
-      marketing: Yup.number()
-        .min(0, 'Marketing allocation cannot be negative')
-        .max(100, 'Marketing allocation cannot exceed 100%')
-        .required('Marketing allocation is required'),
-      development: Yup.number()
-        .min(0, 'Development allocation cannot be negative')
-        .max(100, 'Development allocation cannot exceed 100%')
-        .required('Development allocation is required'),
-      liquidity: Yup.number()
-        .min(0, 'Liquidity allocation cannot be negative')
-        .max(100, 'Liquidity allocation cannot exceed 100%')
-        .required('Liquidity allocation is required'),
-      treasury: Yup.number()
-        .min(0, 'Treasury allocation cannot be negative')
-        .max(100, 'Treasury allocation cannot exceed 100%')
-        .required('Treasury allocation is required'),
-      community: Yup.number()
-        .min(0, 'Community allocation cannot be negative')
-        .max(100, 'Community allocation cannot exceed 100%')
-        .required('Community allocation is required'),
-      advisors: Yup.number()
-        .min(0, 'Advisors allocation cannot be negative')
-        .max(100, 'Advisors allocation cannot exceed 100%')
-        .required('Advisors allocation is required'),
-      partners: Yup.number()
-        .min(0, 'Partners allocation cannot be negative')
-        .max(100, 'Partners allocation cannot exceed 100%')
-        .required('Partners allocation is required'),
-    }).test(
-      'total-allocation',
-      'Total allocation must equal 100%',
-      (value) => {
-        const total = Object.values(value).reduce((sum, val) => sum + val, 0);
-        return Math.abs(total - 100) < 0.01;
-      }
-    ),
-  }),
+  tokenName: Yup.string()
+    .min(2, 'Token name must be at least 2 characters')
+    .max(50, 'Token name cannot exceed 50 characters')
+    .required('Token name is required'),
+  tokenSymbol: Yup.string()
+    .min(2, 'Token symbol must be at least 2 characters')
+    .max(10, 'Token symbol cannot exceed 10 characters')
+    .required('Token symbol is required'),
+  totalSupply: Yup.number()
+    .min(1, 'Total supply must be greater than 0')
+    .required('Total supply is required'),
+  allocation: Yup.object().shape({
+    team: Yup.number()
+      .min(0, 'Team allocation cannot be negative')
+      .max(100, 'Team allocation cannot exceed 100%')
+      .required('Team allocation is required'),
+    marketing: Yup.number()
+      .min(0, 'Marketing allocation cannot be negative')
+      .max(100, 'Marketing allocation cannot exceed 100%')
+      .required('Marketing allocation is required'),
+    development: Yup.number()
+      .min(0, 'Development allocation cannot be negative')
+      .max(100, 'Development allocation cannot exceed 100%')
+      .required('Development allocation is required'),
+    liquidity: Yup.number()
+      .min(0, 'Liquidity allocation cannot be negative')
+      .max(100, 'Liquidity allocation cannot exceed 100%')
+      .required('Liquidity allocation is required'),
+    treasury: Yup.number()
+      .min(0, 'Treasury allocation cannot be negative')
+      .max(100, 'Treasury allocation cannot exceed 100%')
+      .required('Treasury allocation is required'),
+    community: Yup.number()
+      .min(0, 'Community allocation cannot be negative')
+      .max(100, 'Community allocation cannot exceed 100%')
+      .required('Community allocation is required'),
+    advisors: Yup.number()
+      .min(0, 'Advisors allocation cannot be negative')
+      .max(100, 'Advisors allocation cannot exceed 100%')
+      .required('Advisors allocation is required'),
+    partners: Yup.number()
+      .min(0, 'Partners allocation cannot be negative')
+      .max(100, 'Partners allocation cannot exceed 100%')
+      .required('Partners allocation is required'),
+  }).test(
+    'total-allocation',
+    'Total allocation must equal 100%',
+    (value) => {
+      const total = Object.values(value).reduce((sum, val) => sum + val, 0);
+      return Math.abs(total - 100) < 0.01;
+    }
+  ),
 });
 
 // Profile update form validation schema

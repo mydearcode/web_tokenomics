@@ -11,49 +11,66 @@ import {
   Alert,
   Divider,
 } from '@mui/material';
-import { Formik, Form, Field } from 'formik';
+import { useFormik } from 'formik';
 import { profileSchema, passwordChangeSchema } from '../utils/validationSchemas';
 import FormError from '../components/forms/FormError';
 import { useAuth } from '../context/AuthContext';
+import { updateProfile, changePassword } from '../services/api';
 
 const Profile = () => {
-  const { user, updateProfile, updatePassword } = useAuth();
+  const { user, updateUser } = useAuth();
   const [profileError, setProfileError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleProfileSubmit = async (values, { setSubmitting }) => {
-    try {
-      setProfileError('');
-      setProfileSuccess('');
-      setLoading(true);
-      await updateProfile(values.name, values.email);
-      setProfileSuccess('Profile updated successfully');
-    } catch (err) {
-      setProfileError(err.response?.data?.message || 'Failed to update profile');
-    } finally {
-      setLoading(false);
-      setSubmitting(false);
-    }
-  };
+  const profileFormik = useFormik({
+    initialValues: {
+      name: user?.name || '',
+      email: user?.email || '',
+    },
+    validationSchema: profileSchema,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        setProfileError('');
+        setProfileSuccess('');
+        setLoading(true);
+        const data = await updateProfile(values.name, values.email);
+        updateUser(data);
+        setProfileSuccess('Profile updated successfully');
+      } catch (err) {
+        setProfileError(err.response?.data?.message || 'Failed to update profile');
+      } finally {
+        setLoading(false);
+        setSubmitting(false);
+      }
+    },
+  });
 
-  const handlePasswordSubmit = async (values, { resetForm, setSubmitting }) => {
-    try {
-      setPasswordError('');
-      setPasswordSuccess('');
-      setLoading(true);
-      await updatePassword(values.currentPassword, values.newPassword);
-      setPasswordSuccess('Password updated successfully');
-      resetForm();
-    } catch (err) {
-      setPasswordError(err.response?.data?.message || 'Failed to update password');
-    } finally {
-      setLoading(false);
-      setSubmitting(false);
-    }
-  };
+  const passwordFormik = useFormik({
+    initialValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmNewPassword: '',
+    },
+    validationSchema: passwordChangeSchema,
+    onSubmit: async (values, { setSubmitting, resetForm }) => {
+      try {
+        setPasswordError('');
+        setPasswordSuccess('');
+        setLoading(true);
+        await changePassword(values.currentPassword, values.newPassword);
+        setPasswordSuccess('Password updated successfully');
+        resetForm();
+      } catch (err) {
+        setPasswordError(err.response?.data?.message || 'Failed to update password');
+      } finally {
+        setLoading(false);
+        setSubmitting(false);
+      }
+    },
+  });
 
   return (
     <Container maxWidth="md">
@@ -87,7 +104,7 @@ const Profile = () => {
                   email: user?.email || '',
                 }}
                 validationSchema={profileSchema}
-                onSubmit={handleProfileSubmit}
+                onSubmit={profileFormik.handleSubmit}
                 enableReinitialize
               >
                 {({ errors, touched, isSubmitting }) => (
@@ -155,7 +172,7 @@ const Profile = () => {
                   confirmNewPassword: '',
                 }}
                 validationSchema={passwordChangeSchema}
-                onSubmit={handlePasswordSubmit}
+                onSubmit={passwordFormik.handleSubmit}
               >
                 {({ errors, touched, isSubmitting }) => (
                   <Form>

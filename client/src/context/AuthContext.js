@@ -1,130 +1,53 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Set axios default headers
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    if (token && storedUser) {
+      setUser(JSON.parse(storedUser));
     }
-  }, [token]);
+    setLoading(false);
+  }, []);
 
-  // Load user on mount
-  useEffect(() => {
-    const loadUser = async () => {
-      if (token) {
-        try {
-          const res = await axios.get('/api/auth/me');
-          setUser(res.data.user);
-        } catch (err) {
-          console.error('Error loading user:', err);
-          localStorage.removeItem('token');
-          setToken(null);
-          setUser(null);
-        }
-      }
-      setLoading(false);
-    };
-
-    loadUser();
-  }, [token]);
-
-  // Register user
-  const register = async (userData) => {
-    try {
-      setLoading(true);
-      const res = await axios.post('/api/auth/register', userData);
-      setToken(res.data.token);
-      setUser(res.data.user);
-      localStorage.setItem('token', res.data.token);
-      setError(null);
-      return res.data;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
+  const login = (token, userData) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
   };
 
-  // Login user
-  const login = async (userData) => {
-    try {
-      setLoading(true);
-      const res = await axios.post('/api/auth/login', userData);
-      setToken(res.data.token);
-      setUser(res.data.user);
-      localStorage.setItem('token', res.data.token);
-      setError(null);
-      return res.data;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Logout user
   const logout = () => {
     localStorage.removeItem('token');
-    setToken(null);
+    localStorage.removeItem('user');
     setUser(null);
   };
 
-  // Update user profile
-  const updateProfile = async (userData) => {
-    try {
-      setLoading(true);
-      const res = await axios.put(`/api/users/${user.id}`, userData);
-      setUser(res.data.user);
-      setError(null);
-      return res.data;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Profile update failed');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Update password
-  const updatePassword = async (passwordData) => {
-    try {
-      setLoading(true);
-      const res = await axios.put(`/api/users/${user.id}/password`, passwordData);
-      setError(null);
-      return res.data;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Password update failed');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
+  const updateUser = (userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
   };
 
   const value = {
     user,
-    token,
     loading,
-    error,
-    register,
     login,
     logout,
-    updateProfile,
-    updatePassword,
-    isAuthenticated: !!token
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
