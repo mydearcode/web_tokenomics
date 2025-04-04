@@ -123,18 +123,6 @@ const ProjectDetails = () => {
       });
     }
     
-    // Vesting bittikten sonraki aylar için son durumu koru
-    const lastMonth = vestingData.cliffMonths + vestingData.vestingMonths - 1;
-    const maxMonths = Math.max(...Object.values(project.vesting).map(v => v.cliffMonths + v.vestingMonths));
-    
-    for (let month = lastMonth + 1; month <= maxMonths; month++) {
-      schedule.push({
-        month,
-        percentage: categoryAllocation,
-        amount: (project.tokenomics.totalSupply * categoryAllocation) / 100
-      });
-    }
-    
     return schedule;
   };
 
@@ -147,7 +135,7 @@ const ProjectDetails = () => {
     const categories = Object.keys(project.tokenomics.allocation);
     const maxMonths = Math.max(...categories.map(category => {
       const vestingData = project.vesting[category];
-      return vestingData ? vestingData.cliffMonths + vestingData.vestingMonths : 0;
+      return vestingData ? vestingData.cliffMonths + vestingData.vestingMonths - 1 : 0;
     }));
 
     const combinedData = [];
@@ -160,13 +148,18 @@ const ProjectDetails = () => {
       // Her kategori için o aydaki yüzdeyi ekle
       categories.forEach(category => {
         const schedule = calculateVestingSchedule(category);
-        const monthEntry = schedule.find(entry => entry.month === month) || 
-                         schedule[schedule.length - 1]; // Eğer ay bulunamazsa son durumu kullan
+        const monthEntry = schedule.find(entry => entry.month === month);
         
         if (monthEntry) {
+          // Eğer bu ay için veri varsa ekle
           accumulatedPercentage += monthEntry.percentage;
           monthData[category] = accumulatedPercentage;
         } else {
+          // Eğer bu ay için veri yoksa, kategorinin son değerini kullan
+          const lastEntry = schedule[schedule.length - 1];
+          if (lastEntry && month > lastEntry.month) {
+            accumulatedPercentage += lastEntry.percentage;
+          }
           monthData[category] = accumulatedPercentage;
         }
       });
