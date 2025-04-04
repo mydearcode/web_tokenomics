@@ -27,6 +27,10 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { getProject, deleteProject } from '../services/api';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+
+// Renk paleti
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C43', '#A4DE6C', '#D0ED57'];
 
 const ProjectDetails = () => {
   const { id } = useParams();
@@ -51,7 +55,6 @@ const ProjectDetails = () => {
         }
       } catch (err) {
         setError('Failed to load project');
-        console.error('Error loading project:', err);
       } finally {
         setLoading(false);
       }
@@ -67,7 +70,6 @@ const ProjectDetails = () => {
         navigate('/');
       } catch (err) {
         setError('Failed to delete project');
-        console.error('Error deleting project:', err);
       }
     }
   };
@@ -126,6 +128,53 @@ const ProjectDetails = () => {
     return schedule;
   };
 
+  // Tüm kategorilerin vesting verilerini birleştiren fonksiyon
+  const getAllCategoriesVestingData = () => {
+    if (!project?.tokenomics?.allocation || !project?.vesting) {
+      return [];
+    }
+
+    const categories = Object.keys(project.tokenomics.allocation);
+    const maxMonths = Math.max(...categories.map(category => {
+      const schedule = calculateVestingSchedule(category);
+      return schedule.length > 0 ? schedule[schedule.length - 1].month : 0;
+    }));
+
+    const combinedData = [];
+    
+    // Her ay için veri oluştur
+    for (let month = 0; month <= maxMonths; month++) {
+      const monthData = { month };
+      
+      // Her kategori için o aydaki yüzdeyi ekle
+      categories.forEach(category => {
+        const schedule = calculateVestingSchedule(category);
+        const monthEntry = schedule.find(entry => entry.month === month);
+        if (monthEntry) {
+          monthData[category] = parseFloat(monthEntry.percentage.toFixed(2));
+        } else {
+          monthData[category] = 0;
+        }
+      });
+      
+      combinedData.push(monthData);
+    }
+    
+    return combinedData;
+  };
+
+  // Allocation verilerini pie chart için hazırlayan fonksiyon
+  const prepareAllocationData = () => {
+    if (!project?.tokenomics?.allocation) {
+      return [];
+    }
+
+    return Object.entries(project.tokenomics.allocation).map(([name, data]) => ({
+      name,
+      value: data.percentage
+    }));
+  };
+
   if (loading) {
     return (
       <Box
@@ -158,6 +207,8 @@ const ProjectDetails = () => {
   }
 
   const isOwner = user && project.userId === user.id;
+  const allocationData = prepareAllocationData();
+  const allCategoriesVestingData = getAllCategoriesVestingData();
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -184,7 +235,6 @@ const ProjectDetails = () => {
                 variant="outlined"
                 startIcon={<EditIcon />}
                 onClick={() => {
-                  console.log('Navigating to edit page for project:', id);
                   navigate(`/projects/${id}/edit`);
                 }}
               >
@@ -237,6 +287,31 @@ const ProjectDetails = () => {
         <Typography variant="h5" gutterBottom>
           Token Allocation
         </Typography>
+        
+        {/* Allocation Pie Chart */}
+        <Box sx={{ height: 400, mb: 4 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={allocationData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={150}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {allocationData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => `${value}%`} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </Box>
+        
         <Grid container spacing={2}>
           {project.tokenomics?.allocation ? Object.entries(project.tokenomics.allocation).map(([key, value]) => (
             <Grid item xs={12} sm={6} md={4} key={key}>
@@ -268,6 +343,36 @@ const ProjectDetails = () => {
         <Typography variant="h5" gutterBottom>
           Vesting Schedule
         </Typography>
+        
+        {/* Combined Vesting Schedule Chart */}
+        <Box sx={{ height: 400, mb: 4 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={allCategoriesVestingData}
+              margin={{
+                top: 5,
+                right: 30,
+                left: 20,
+                bottom: 5,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" label={{ value: 'Month', position: 'insideBottom', offset: -5 }} />
+              <YAxis label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
+              <Tooltip formatter={(value) => `${value}%`} />
+              <Legend />
+              {Object.keys(project.tokenomics?.allocation || {}).map((category, index) => (
+                <Line
+                  key={category}
+                  type="monotone"
+                  dataKey={category}
+                  stroke={COLORS[index % COLORS.length]}
+                  activeDot={{ r: 8 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </Box>
         
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
           <Tabs

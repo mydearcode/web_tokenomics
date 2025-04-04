@@ -182,7 +182,7 @@ const ProjectCreate = () => {
         )
       };
       
-      const response = await createProject(projectData);
+      await createProject(projectData);
       
       // Add a small delay before navigating to ensure the project is saved
       setTimeout(() => {
