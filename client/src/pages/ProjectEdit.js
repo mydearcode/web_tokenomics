@@ -34,34 +34,11 @@ const ProjectEdit = () => {
     tokenName: '',
     tokenSymbol: '',
     totalSupply: '',
-    allocation: {
-      team: 0,
-      marketing: 0,
-      development: 0,
-      liquidity: 0,
-      treasury: 0,
-      community: 0,
-      advisors: 0,
-      partners: 0
-    },
-    vesting: {
-      team: {
-        tgePercentage: 0,
-        cliffMonths: 0,
-        vestingMonths: 0
-      },
-      advisors: {
-        tgePercentage: 0,
-        cliffMonths: 0,
-        vestingMonths: 0
-      },
-      partners: {
-        tgePercentage: 0,
-        cliffMonths: 0,
-        vestingMonths: 0
-      }
-    }
+    allocation: {},
+    vesting: {}
   });
+
+  const [allocationCategories, setAllocationCategories] = useState([]);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -70,42 +47,42 @@ const ProjectEdit = () => {
         const project = await getProject(id);
         console.log('Fetched project:', project);
         
+        // Get allocation categories from project data
+        const categories = Object.keys(project.tokenomics?.allocation || {});
+        setAllocationCategories(categories);
+        
         // Transform project data to form data
-        setFormData({
+        const transformedData = {
           name: project.name || '',
           description: project.description || '',
           isPublic: project.isPublic || false,
           tokenName: project.tokenomics?.tokenName || '',
           tokenSymbol: project.tokenomics?.tokenSymbol || '',
           totalSupply: project.tokenomics?.totalSupply?.toString() || '',
-          allocation: {
-            team: project.tokenomics?.allocation?.team?.percentage || 0,
-            marketing: project.tokenomics?.allocation?.marketing?.percentage || 0,
-            development: project.tokenomics?.allocation?.development?.percentage || 0,
-            liquidity: project.tokenomics?.allocation?.liquidity?.percentage || 0,
-            treasury: project.tokenomics?.allocation?.treasury?.percentage || 0,
-            community: project.tokenomics?.allocation?.community?.percentage || 0,
-            advisors: project.tokenomics?.allocation?.advisors?.percentage || 0,
-            partners: project.tokenomics?.allocation?.partners?.percentage || 0
-          },
-          vesting: project.vesting || {
-            team: {
-              tgePercentage: 0,
-              cliffMonths: 0,
-              vestingMonths: 0
-            },
-            advisors: {
-              tgePercentage: 0,
-              cliffMonths: 0,
-              vestingMonths: 0
-            },
-            partners: {
-              tgePercentage: 0,
-              cliffMonths: 0,
-              vestingMonths: 0
-            }
-          }
-        });
+          allocation: {},
+          vesting: {}
+        };
+        
+        // Process allocation data
+        if (project.tokenomics?.allocation) {
+          Object.entries(project.tokenomics.allocation).forEach(([key, value]) => {
+            transformedData.allocation[key] = value.percentage || 0;
+          });
+        }
+        
+        // Process vesting data
+        if (project.vesting) {
+          Object.entries(project.vesting).forEach(([key, value]) => {
+            transformedData.vesting[key] = {
+              tgePercentage: value?.tgePercentage ?? 10,
+              cliffMonths: value?.cliffMonths ?? 6,
+              vestingMonths: value?.vestingMonths ?? 12
+            };
+          });
+        }
+        
+        setFormData(transformedData);
+        console.log('Transformed form data:', transformedData);
       } catch (err) {
         console.error('Error fetching project:', err);
         setError('Failed to load project');
@@ -138,6 +115,59 @@ const ProjectEdit = () => {
     } else {
       setFormData({ ...formData, [name]: value });
     }
+  };
+
+  const handleAddCategory = () => {
+    const categoryName = prompt('Enter category name:');
+    if (categoryName && !formData.allocation[categoryName]) {
+      setAllocationCategories([...allocationCategories, categoryName]);
+      setFormData(prev => ({
+        ...prev,
+        allocation: {
+          ...prev.allocation,
+          [categoryName]: 0
+        },
+        vesting: {
+          ...prev.vesting,
+          [categoryName]: {
+            tgePercentage: 10,
+            cliffMonths: 6,
+            vestingMonths: 12
+          }
+        }
+      }));
+      
+      // Log the updated form data
+      console.log('Added category:', categoryName);
+      console.log('Updated form data:', {
+        allocation: { ...formData.allocation, [categoryName]: 0 },
+        vesting: { 
+          ...formData.vesting, 
+          [categoryName]: {
+            tgePercentage: 10,
+            cliffMonths: 6,
+            vestingMonths: 12
+          }
+        }
+      });
+    }
+  };
+
+  const handleRemoveCategory = (category) => {
+    const newCategories = allocationCategories.filter(c => c !== category);
+    setAllocationCategories(newCategories);
+    
+    const newAllocation = { ...formData.allocation };
+    delete newAllocation[category];
+    
+    const newVesting = { ...formData.vesting };
+    delete newVesting[category];
+    
+    setFormData(prev => ({
+      ...prev,
+      allocation: newAllocation,
+      vesting: newVesting
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -187,49 +217,8 @@ const ProjectEdit = () => {
         tokenomics: {
           tokenName: formData.tokenName,
           tokenSymbol: formData.tokenSymbol,
-          totalSupply: Number(totalSupply),
-          allocation: {
-            team: {
-              percentage: Number(formData.allocation.team) || 0,
-              vestingPeriod: 0,
-              cliff: 0
-            },
-            marketing: {
-              percentage: Number(formData.allocation.marketing) || 0,
-              vestingPeriod: 0,
-              cliff: 0
-            },
-            development: {
-              percentage: Number(formData.allocation.development) || 0,
-              vestingPeriod: 0,
-              cliff: 0
-            },
-            liquidity: {
-              percentage: Number(formData.allocation.liquidity) || 0,
-              vestingPeriod: 0,
-              cliff: 0
-            },
-            treasury: {
-              percentage: Number(formData.allocation.treasury) || 0,
-              vestingPeriod: 0,
-              cliff: 0
-            },
-            community: {
-              percentage: Number(formData.allocation.community) || 0,
-              vestingPeriod: 0,
-              cliff: 0
-            },
-            advisors: {
-              percentage: Number(formData.allocation.advisors) || 0,
-              vestingPeriod: 0,
-              cliff: 0
-            },
-            partners: {
-              percentage: Number(formData.allocation.partners) || 0,
-              vestingPeriod: 0,
-              cliff: 0
-            }
-          }
+          totalSupply: Number(formData.totalSupply),
+          allocation: formData.allocation
         },
         vesting: formData.vesting
       };
@@ -258,29 +247,44 @@ const ProjectEdit = () => {
   const calculateVestingSchedule = (category) => {
     const vestingData = formData.vesting[category];
     const allocation = formData.allocation[category];
-    const tgeAmount = (allocation * vestingData.tgePercentage) / 100;
-    const remainingAmount = allocation - tgeAmount;
+    const totalTokens = (Number(formData.totalSupply) * allocation) / 100;
+    
+    // TGE anında açılacak miktar (M0)
+    const tgeAmount = (totalTokens * vestingData.tgePercentage) / 100;
+    const remainingAmount = totalTokens - tgeAmount;
+    
+    // Kalan miktar vesting aylarına bölünecek
     const monthlyVesting = remainingAmount / vestingData.vestingMonths;
     
     const schedule = [];
     
-    // TGE anındaki miktar
+    // M0 (TGE)
     schedule.push({
       month: 0,
       percentage: vestingData.tgePercentage,
       amount: tgeAmount
     });
     
-    // Cliff süresi sonrası vesting
+    // Cliff dönemi (M1-M6: 0 token)
+    for (let i = 1; i <= vestingData.cliffMonths; i++) {
+      schedule.push({
+        month: i,
+        percentage: vestingData.tgePercentage,
+        amount: 0
+      });
+    }
+    
+    // Vesting dönemi (M7-M12: her ay eşit miktar)
+    let releasedAmount = tgeAmount; // TGE'de açılan miktar
     for (let i = 1; i <= vestingData.vestingMonths; i++) {
       const month = vestingData.cliffMonths + i;
-      const percentage = (vestingData.tgePercentage + (i * (100 - vestingData.tgePercentage) / vestingData.vestingMonths)).toFixed(2);
-      const amount = tgeAmount + (monthlyVesting * i);
+      releasedAmount += monthlyVesting; // Her ay eşit miktar ekle
+      const percentage = (releasedAmount / totalTokens) * 100;
       
       schedule.push({
         month,
-        percentage: parseFloat(percentage),
-        amount: parseFloat(amount.toFixed(2))
+        percentage: parseFloat(percentage.toFixed(2)),
+        amount: parseFloat(releasedAmount.toFixed(2))
       });
     }
     
@@ -385,142 +389,166 @@ const ProjectEdit = () => {
                 />
               </Grid>
               <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>
-                  Token Allocation (%)
-                </Typography>
-                <Grid container spacing={2}>
-                  {Object.keys(formData.allocation).map((key) => (
-                    <Grid item xs={12} sm={6} md={4} key={key}>
-                      <TextField
-                        fullWidth
-                        type="number"
-                        name={`allocation.${key}`}
-                        label={key.charAt(0).toUpperCase() + key.slice(1)}
-                        value={formData.allocation[key]}
-                        onChange={handleChange}
-                        required
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">Token Allocation (%)</Typography>
+                  <Button variant="outlined" onClick={handleAddCategory}>
+                    Add Category
+                  </Button>
+                </Box>
+                {allocationCategories.length === 0 ? (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Click "Add Category" to add token allocation categories
+                  </Alert>
+                ) : (
+                  <Grid container spacing={2}>
+                    {allocationCategories.map((category) => (
+                      <Grid item xs={12} sm={6} md={4} key={category}>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <TextField
+                            fullWidth
+                            type="number"
+                            name={`allocation.${category}`}
+                            label={category.charAt(0).toUpperCase() + category.slice(1)}
+                            value={formData.allocation[category]}
+                            onChange={handleChange}
+                            required
+                          />
+                          <Button
+                            color="error"
+                            onClick={() => handleRemoveCategory(category)}
+                            sx={{ minWidth: 'auto' }}
+                          >
+                            X
+                          </Button>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
               </Grid>
               <Grid item xs={12}>
                 <Box sx={{ mt: 4 }}>
                   <Typography variant="h6" gutterBottom>
                     Vesting Schedule
                   </Typography>
-                  <Grid container spacing={3}>
-                    {['team', 'advisors', 'partners'].map((category) => (
-                      <Grid item xs={12} key={category}>
-                        <Paper sx={{ p: 2 }}>
-                          <Typography variant="subtitle1" gutterBottom>
-                            {category.charAt(0).toUpperCase() + category.slice(1)} Vesting
-                          </Typography>
-                          <Grid container spacing={2}>
-                            <Grid item xs={12} sm={4}>
-                              <TextField
-                                fullWidth
-                                label="TGE Percentage"
-                                type="number"
-                                value={formData.vesting[category].tgePercentage}
-                                onChange={(e) => {
-                                  const value = parseFloat(e.target.value) || 0;
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    vesting: {
-                                      ...prev.vesting,
-                                      [category]: {
-                                        ...prev.vesting[category],
-                                        tgePercentage: value
-                                      }
-                                    }
-                                  }));
-                                }}
-                                InputProps={{
-                                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                                }}
-                              />
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <TextField
-                                fullWidth
-                                label="Cliff Months"
-                                type="number"
-                                value={formData.vesting[category].cliffMonths}
-                                onChange={(e) => {
-                                  const value = parseInt(e.target.value) || 0;
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    vesting: {
-                                      ...prev.vesting,
-                                      [category]: {
-                                        ...prev.vesting[category],
-                                        cliffMonths: value
-                                      }
-                                    }
-                                  }));
-                                }}
-                                InputProps={{
-                                  endAdornment: <InputAdornment position="end">months</InputAdornment>,
-                                }}
-                              />
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <TextField
-                                fullWidth
-                                label="Vesting Months"
-                                type="number"
-                                value={formData.vesting[category].vestingMonths}
-                                onChange={(e) => {
-                                  const value = parseInt(e.target.value) || 0;
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    vesting: {
-                                      ...prev.vesting,
-                                      [category]: {
-                                        ...prev.vesting[category],
-                                        vestingMonths: value
-                                      }
-                                    }
-                                  }));
-                                }}
-                                InputProps={{
-                                  endAdornment: <InputAdornment position="end">months</InputAdornment>,
-                                }}
-                              />
-                            </Grid>
-                          </Grid>
-                          
-                          {/* Vesting Schedule Preview */}
-                          <Box sx={{ mt: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              Vesting Schedule Preview
+                  {allocationCategories.length === 0 ? (
+                    <Alert severity="info">
+                      Add allocation categories to configure vesting schedules
+                    </Alert>
+                  ) : (
+                    <Grid container spacing={3}>
+                      {allocationCategories.map((category) => (
+                        <Grid item xs={12} key={category}>
+                          <Paper sx={{ p: 2 }}>
+                            <Typography variant="subtitle1" gutterBottom>
+                              {category.charAt(0).toUpperCase() + category.slice(1)} Vesting
                             </Typography>
-                            <TableContainer component={Paper} variant="outlined">
-                              <Table size="small">
-                                <TableHead>
-                                  <TableRow>
-                                    <TableCell>Month</TableCell>
-                                    <TableCell align="right">Percentage</TableCell>
-                                    <TableCell align="right">Amount</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {calculateVestingSchedule(category).map((row) => (
-                                    <TableRow key={row.month}>
-                                      <TableCell>M{row.month}</TableCell>
-                                      <TableCell align="right">{row.percentage}%</TableCell>
-                                      <TableCell align="right">{row.amount.toLocaleString()}</TableCell>
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} sm={4}>
+                                <TextField
+                                  fullWidth
+                                  label="TGE Percentage"
+                                  type="number"
+                                  value={formData.vesting[category]?.tgePercentage || 0}
+                                  onChange={(e) => {
+                                    const value = parseFloat(e.target.value) || 0;
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      vesting: {
+                                        ...prev.vesting,
+                                        [category]: {
+                                          ...prev.vesting[category],
+                                          tgePercentage: value
+                                        }
+                                      }
+                                    }));
+                                  }}
+                                  InputProps={{
+                                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} sm={4}>
+                                <TextField
+                                  fullWidth
+                                  label="Cliff Months"
+                                  type="number"
+                                  value={formData.vesting[category]?.cliffMonths || 6}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      vesting: {
+                                        ...prev.vesting,
+                                        [category]: {
+                                          ...prev.vesting[category],
+                                          cliffMonths: value
+                                        }
+                                      }
+                                    }));
+                                  }}
+                                  InputProps={{
+                                    endAdornment: <InputAdornment position="end">months</InputAdornment>,
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} sm={4}>
+                                <TextField
+                                  fullWidth
+                                  label="Vesting Months"
+                                  type="number"
+                                  value={formData.vesting[category]?.vestingMonths || 12}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      vesting: {
+                                        ...prev.vesting,
+                                        [category]: {
+                                          ...prev.vesting[category],
+                                          vestingMonths: value
+                                        }
+                                      }
+                                    }));
+                                  }}
+                                  InputProps={{
+                                    endAdornment: <InputAdornment position="end">months</InputAdornment>,
+                                  }}
+                                />
+                              </Grid>
+                            </Grid>
+                            
+                            {/* Vesting Schedule Preview */}
+                            <Box sx={{ mt: 2 }}>
+                              <Typography variant="subtitle2" gutterBottom>
+                                Vesting Schedule Preview
+                              </Typography>
+                              <TableContainer component={Paper} variant="outlined">
+                                <Table size="small">
+                                  <TableHead>
+                                    <TableRow>
+                                      <TableCell>Month</TableCell>
+                                      <TableCell align="right">Percentage</TableCell>
+                                      <TableCell align="right">Amount</TableCell>
                                     </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </TableContainer>
-                          </Box>
-                        </Paper>
-                      </Grid>
-                    ))}
-                  </Grid>
+                                  </TableHead>
+                                  <TableBody>
+                                    {calculateVestingSchedule(category).map((row) => (
+                                      <TableRow key={row.month}>
+                                        <TableCell>M{row.month}</TableCell>
+                                        <TableCell align="right">{row.percentage}%</TableCell>
+                                        <TableCell align="right">{row.amount.toLocaleString()}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </TableContainer>
+                            </Box>
+                          </Paper>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  )}
                 </Box>
               </Grid>
               <Grid item xs={12}>

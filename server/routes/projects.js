@@ -48,6 +48,38 @@ router.post('/', protect, async (req, res) => {
     // Add owner to the project
     req.body.owner = req.user.id;
     
+    // Log the incoming request body
+    console.log('Creating project with data:', JSON.stringify(req.body, null, 2));
+    
+    // Ensure allocation and vesting data are properly formatted
+    if (req.body.tokenomics && req.body.tokenomics.allocation) {
+      // Convert allocation data to the correct format if needed
+      const allocationData = {};
+      Object.entries(req.body.tokenomics.allocation).forEach(([key, value]) => {
+        allocationData[key] = {
+          percentage: Number(value),
+          amount: (Number(req.body.tokenomics.totalSupply) * Number(value)) / 100
+        };
+      });
+      req.body.tokenomics.allocation = allocationData;
+    }
+    
+    if (req.body.vesting) {
+      // Ensure vesting data is properly formatted
+      const vestingData = {};
+      Object.entries(req.body.vesting).forEach(([key, value]) => {
+        vestingData[key] = {
+          tgePercentage: Number(value.tgePercentage),
+          cliffMonths: Number(value.cliffMonths),
+          vestingMonths: Number(value.vestingMonths)
+        };
+      });
+      req.body.vesting = vestingData;
+    }
+    
+    // Log the processed data
+    console.log('Processed project data:', JSON.stringify(req.body, null, 2));
+    
     const project = await Project.create(req.body);
     
     res.status(201).json({
@@ -55,6 +87,7 @@ router.post('/', protect, async (req, res) => {
       data: project
     });
   } catch (error) {
+    console.error('Error creating project:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -62,6 +95,38 @@ router.post('/', protect, async (req, res) => {
 // Update a project
 router.put('/:id', protect, checkProjectAccess, checkEditAccess, async (req, res) => {
   try {
+    // Log the incoming request body
+    console.log('Updating project with data:', JSON.stringify(req.body, null, 2));
+    
+    // Ensure allocation and vesting data are properly formatted
+    if (req.body.tokenomics && req.body.tokenomics.allocation) {
+      // Convert allocation data to the correct format if needed
+      const allocationData = {};
+      Object.entries(req.body.tokenomics.allocation).forEach(([key, value]) => {
+        allocationData[key] = {
+          percentage: Number(value),
+          amount: (Number(req.body.tokenomics.totalSupply) * Number(value)) / 100
+        };
+      });
+      req.body.tokenomics.allocation = allocationData;
+    }
+    
+    if (req.body.vesting) {
+      // Ensure vesting data is properly formatted
+      const vestingData = {};
+      Object.entries(req.body.vesting).forEach(([key, value]) => {
+        vestingData[key] = {
+          tgePercentage: Number(value.tgePercentage),
+          cliffMonths: Number(value.cliffMonths),
+          vestingMonths: Number(value.vestingMonths)
+        };
+      });
+      req.body.vesting = vestingData;
+    }
+    
+    // Log the processed data
+    console.log('Processed update data:', JSON.stringify(req.body, null, 2));
+    
     const project = await Project.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -73,6 +138,7 @@ router.put('/:id', protect, checkProjectAccess, checkEditAccess, async (req, res
       data: project
     });
   } catch (error) {
+    console.error('Error updating project:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
