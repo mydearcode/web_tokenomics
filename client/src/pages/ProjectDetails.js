@@ -27,7 +27,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { getProject, deleteProject } from '../services/api';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 // Renk paleti
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C43', '#A4DE6C', '#D0ED57'];
@@ -145,16 +145,18 @@ const ProjectDetails = () => {
     // Her ay için veri oluştur
     for (let month = 0; month <= maxMonths; month++) {
       const monthData = { month };
+      let accumulatedPercentage = 0;
       
-      // Her kategori için o aydaki yüzdeyi ekle
+      // Her kategori için o aydaki yüzdeyi ekle ve kümülatif toplamı hesapla
       categories.forEach(category => {
         const schedule = calculateVestingSchedule(category);
         const monthEntry = schedule.find(entry => entry.month === month);
-        if (monthEntry) {
-          monthData[category] = parseFloat(monthEntry.percentage.toFixed(2));
-        } else {
-          monthData[category] = 0;
-        }
+        const categoryPercentage = monthEntry ? monthEntry.percentage : 0;
+        
+        // Her kategorinin kendi yüzdesini ve kümülatif toplamı sakla
+        monthData[category] = categoryPercentage;
+        accumulatedPercentage += (project.tokenomics.allocation[category].percentage * categoryPercentage) / 100;
+        monthData[`${category}Total`] = accumulatedPercentage;
       });
       
       combinedData.push(monthData);
@@ -347,7 +349,7 @@ const ProjectDetails = () => {
         {/* Combined Vesting Schedule Chart */}
         <Box sx={{ height: 400, mb: 4 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
+            <AreaChart
               data={allCategoriesVestingData}
               margin={{
                 top: 5,
@@ -357,20 +359,31 @@ const ProjectDetails = () => {
               }}
             >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" label={{ value: 'Month', position: 'insideBottom', offset: -5 }} />
-              <YAxis label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
-              <Tooltip formatter={(value) => `${value}%`} />
+              <XAxis 
+                dataKey="month" 
+                label={{ value: 'Month', position: 'insideBottom', offset: -5 }} 
+              />
+              <YAxis 
+                label={{ value: 'Percentage of Total Supply (%)', angle: -90, position: 'insideLeft' }}
+                domain={[0, 100]}
+              />
+              <Tooltip 
+                formatter={(value, name) => [`${parseFloat(value).toFixed(2)}%`, name.replace('Total', '')]}
+                labelFormatter={(label) => `Month ${label}`}
+              />
               <Legend />
-              {Object.keys(project.tokenomics?.allocation || {}).map((category, index) => (
-                <Line
+              {Object.keys(project.tokenomics?.allocation || {}).reverse().map((category, index) => (
+                <Area
                   key={category}
                   type="monotone"
-                  dataKey={category}
+                  dataKey={`${category}Total`}
+                  name={category}
+                  stackId="1"
                   stroke={COLORS[index % COLORS.length]}
-                  activeDot={{ r: 8 }}
+                  fill={COLORS[index % COLORS.length]}
                 />
               ))}
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </Box>
         
