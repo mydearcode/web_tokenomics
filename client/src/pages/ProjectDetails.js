@@ -87,41 +87,39 @@ const ProjectDetails = () => {
       return [];
     }
 
-    const totalTokens = (project.tokenomics.totalSupply * allocationData.percentage) / 100;
-    const tgeAmount = (totalTokens * vestingData.tgePercentage) / 100;
-    const remainingAmount = totalTokens - tgeAmount;
-    const monthlyVesting = remainingAmount / vestingData.vestingMonths;
+    const categoryAllocation = allocationData.percentage; // Kategorinin toplam allocation yüzdesi
+    const tgePercentage = (categoryAllocation * vestingData.tgePercentage) / 100; // TGE'de açılacak miktar
+    const remainingPercentage = categoryAllocation - tgePercentage; // Vesting ile açılacak kalan miktar
+    const monthlyPercentage = remainingPercentage / vestingData.vestingMonths; // Her ay açılacak yüzde
     
     const schedule = [];
     
-    // TGE (M0) - Artık cliff süresine dahil edilecek
+    // TGE (M0)
     schedule.push({
       month: 0,
-      percentage: vestingData.tgePercentage,
-      amount: tgeAmount
+      percentage: tgePercentage,
+      amount: (project.tokenomics.totalSupply * tgePercentage) / 100
     });
     
-    // Cliff dönemi (TGE dahil)
-    // TGE zaten M0'da olduğu için, cliff süresini 1 azaltıyoruz
+    // Cliff dönemi
     for (let i = 1; i < vestingData.cliffMonths; i++) {
       schedule.push({
         month: i,
-        percentage: vestingData.tgePercentage,
-        amount: 0
+        percentage: tgePercentage,
+        amount: (project.tokenomics.totalSupply * tgePercentage) / 100
       });
     }
     
     // Vesting dönemi
-    let releasedAmount = tgeAmount;
+    let currentPercentage = tgePercentage;
     for (let i = 0; i < vestingData.vestingMonths; i++) {
       const month = vestingData.cliffMonths + i;
-      releasedAmount += monthlyVesting;
-      const percentage = (releasedAmount / totalTokens) * 100;
+      currentPercentage += monthlyPercentage;
       
       schedule.push({
         month,
-        percentage: parseFloat(percentage.toFixed(2)),
-        amount: parseFloat(releasedAmount.toFixed(2))
+        percentage: currentPercentage,
+        amount: (project.tokenomics.totalSupply * currentPercentage) / 100
       });
     }
     
@@ -147,16 +145,18 @@ const ProjectDetails = () => {
       const monthData = { month };
       let accumulatedPercentage = 0;
       
-      // Her kategori için o aydaki yüzdeyi ekle ve kümülatif toplamı hesapla
+      // Her kategori için o aydaki yüzdeyi ekle
       categories.forEach(category => {
         const schedule = calculateVestingSchedule(category);
         const monthEntry = schedule.find(entry => entry.month === month);
-        const categoryPercentage = monthEntry ? monthEntry.percentage : 0;
         
-        // Her kategorinin kendi yüzdesini ve kümülatif toplamı sakla
-        monthData[category] = categoryPercentage;
-        accumulatedPercentage += (project.tokenomics.allocation[category].percentage * categoryPercentage) / 100;
-        monthData[`${category}Total`] = accumulatedPercentage;
+        if (monthEntry) {
+          accumulatedPercentage += monthEntry.percentage;
+          monthData[`${category}Total`] = accumulatedPercentage;
+        } else {
+          // Eğer bu ay için veri yoksa, son durumu koru
+          monthData[`${category}Total`] = accumulatedPercentage;
+        }
       });
       
       combinedData.push(monthData);
@@ -366,9 +366,13 @@ const ProjectDetails = () => {
               <YAxis 
                 label={{ value: 'Percentage of Total Supply (%)', angle: -90, position: 'insideLeft' }}
                 domain={[0, 100]}
+                ticks={[0, 20, 40, 60, 80, 100]}
               />
               <Tooltip 
-                formatter={(value, name) => [`${parseFloat(value).toFixed(2)}%`, name.replace('Total', '')]}
+                formatter={(value, name) => {
+                  const baseName = name.replace('Total', '');
+                  return [`${parseFloat(value).toFixed(2)}%`, baseName];
+                }}
                 labelFormatter={(label) => `Month ${label}`}
               />
               <Legend />
