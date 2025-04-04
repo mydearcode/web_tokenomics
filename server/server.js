@@ -37,8 +37,18 @@ mongoose
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/projects', require('./routes/projects'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/projects', require('./routes/projects'));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Server Error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+  });
+});
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
@@ -48,16 +58,6 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
   });
 }
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: 'Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined,
-  });
-});
 
 // Start server
 const PORT = 5001;
