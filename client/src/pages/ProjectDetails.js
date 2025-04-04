@@ -88,7 +88,7 @@ const ProjectDetails = () => {
     }
 
     const categoryAllocation = allocationData.percentage; // Kategorinin toplam allocation yüzdesi
-    const tgePercentage = (categoryAllocation * vestingData.tgePercentage) / 100; // TGE'de açılacak miktar
+    const tgePercentage = (vestingData.tgePercentage * categoryAllocation) / 100; // TGE'de açılacak miktar
     const remainingPercentage = categoryAllocation - tgePercentage; // Vesting ile açılacak kalan miktar
     const monthlyPercentage = remainingPercentage / vestingData.vestingMonths; // Her ay açılacak yüzde
     
@@ -118,8 +118,20 @@ const ProjectDetails = () => {
       
       schedule.push({
         month,
-        percentage: currentPercentage,
-        amount: (project.tokenomics.totalSupply * currentPercentage) / 100
+        percentage: Math.min(currentPercentage, categoryAllocation), // Maksimum kategori allocation'ını geçmemeli
+        amount: (project.tokenomics.totalSupply * Math.min(currentPercentage, categoryAllocation)) / 100
+      });
+    }
+    
+    // Vesting bittikten sonraki aylar için son durumu koru
+    const lastMonth = vestingData.cliffMonths + vestingData.vestingMonths - 1;
+    const maxMonths = Math.max(...Object.values(project.vesting).map(v => v.cliffMonths + v.vestingMonths));
+    
+    for (let month = lastMonth + 1; month <= maxMonths; month++) {
+      schedule.push({
+        month,
+        percentage: categoryAllocation,
+        amount: (project.tokenomics.totalSupply * categoryAllocation) / 100
       });
     }
     
@@ -134,8 +146,8 @@ const ProjectDetails = () => {
 
     const categories = Object.keys(project.tokenomics.allocation);
     const maxMonths = Math.max(...categories.map(category => {
-      const schedule = calculateVestingSchedule(category);
-      return schedule.length > 0 ? schedule[schedule.length - 1].month : 0;
+      const vestingData = project.vesting[category];
+      return vestingData ? vestingData.cliffMonths + vestingData.vestingMonths : 0;
     }));
 
     const combinedData = [];
@@ -148,14 +160,14 @@ const ProjectDetails = () => {
       // Her kategori için o aydaki yüzdeyi ekle
       categories.forEach(category => {
         const schedule = calculateVestingSchedule(category);
-        const monthEntry = schedule.find(entry => entry.month === month);
+        const monthEntry = schedule.find(entry => entry.month === month) || 
+                         schedule[schedule.length - 1]; // Eğer ay bulunamazsa son durumu kullan
         
         if (monthEntry) {
           accumulatedPercentage += monthEntry.percentage;
-          monthData[`${category}Total`] = accumulatedPercentage;
+          monthData[category] = accumulatedPercentage;
         } else {
-          // Eğer bu ay için veri yoksa, son durumu koru
-          monthData[`${category}Total`] = accumulatedPercentage;
+          monthData[category] = accumulatedPercentage;
         }
       });
       
@@ -366,12 +378,13 @@ const ProjectDetails = () => {
               <YAxis 
                 label={{ value: 'Percentage of Total Supply (%)', angle: -90, position: 'insideLeft' }}
                 domain={[0, 100]}
-                ticks={[0, 20, 40, 60, 80, 100]}
+                ticks={[0, 25, 50, 75, 100]}
               />
               <Tooltip 
                 formatter={(value, name) => {
-                  const baseName = name.replace('Total', '');
-                  return [`${parseFloat(value).toFixed(2)}%`, baseName];
+                  const currentValue = parseFloat(value).toFixed(2);
+                  const categoryAllocation = project.tokenomics.allocation[name].percentage;
+                  return [`${currentValue}% of ${categoryAllocation}%`, name];
                 }}
                 labelFormatter={(label) => `Month ${label}`}
               />
@@ -380,7 +393,7 @@ const ProjectDetails = () => {
                 <Area
                   key={category}
                   type="monotone"
-                  dataKey={`${category}Total`}
+                  dataKey={category}
                   name={category}
                   stackId="1"
                   stroke={COLORS[index % COLORS.length]}
