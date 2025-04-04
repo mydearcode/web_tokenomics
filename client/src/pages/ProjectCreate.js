@@ -19,8 +19,13 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { createProject } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const ProjectCreate = () => {
   const navigate = useNavigate();
@@ -436,29 +441,37 @@ const ProjectCreate = () => {
                             
                             {/* Vesting Schedule Preview */}
                             <Box sx={{ mt: 2 }}>
-                              <Typography variant="subtitle2" gutterBottom>
-                                Vesting Schedule Preview
-                              </Typography>
-                              <TableContainer component={Paper} variant="outlined">
-                                <Table size="small">
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableCell>Month</TableCell>
-                                      <TableCell align="right">Percentage</TableCell>
-                                      <TableCell align="right">Amount</TableCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    {calculateVestingSchedule(category).map((row) => (
-                                      <TableRow key={row.month}>
-                                        <TableCell>{row.monthDisplay}</TableCell>
-                                        <TableCell align="right">{row.percentage}%</TableCell>
-                                        <TableCell align="right">{row.amount.toLocaleString()}</TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </TableContainer>
+                              <Accordion>
+                                <AccordionSummary
+                                  expandIcon={<ExpandMoreIcon />}
+                                  aria-controls="panel1a-content"
+                                  id="panel1a-header"
+                                >
+                                  <Typography>Vesting Schedule Timeline</Typography>
+                                </AccordionSummary>
+                                <AccordionDetails>
+                                  <TableContainer component={Paper} variant="outlined">
+                                    <Table size="small">
+                                      <TableHead>
+                                        <TableRow>
+                                          <TableCell>Month</TableCell>
+                                          <TableCell align="right">Percentage</TableCell>
+                                          <TableCell align="right">Amount</TableCell>
+                                        </TableRow>
+                                      </TableHead>
+                                      <TableBody>
+                                        {calculateVestingSchedule(category).map((row) => (
+                                          <TableRow key={row.month}>
+                                            <TableCell>{row.monthDisplay}</TableCell>
+                                            <TableCell align="right">{row.percentage}%</TableCell>
+                                            <TableCell align="right">{row.amount.toLocaleString()}</TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </TableContainer>
+                                </AccordionDetails>
+                              </Accordion>
                             </Box>
                           </Paper>
                         </Grid>
