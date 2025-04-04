@@ -22,6 +22,10 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { getProject, updateProject } from '../services/api';
@@ -47,6 +51,10 @@ const ProjectEdit = () => {
   });
 
   const [allocationCategories, setAllocationCategories] = useState([]);
+  
+  // Dialog state
+  const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -172,18 +180,26 @@ const ProjectEdit = () => {
   };
 
   const handleAddCategory = () => {
-    const categoryName = prompt('Enter category name:');
-    if (categoryName && !formData.allocation[categoryName]) {
-      setAllocationCategories([...allocationCategories, categoryName]);
+    setNewCategoryName('');
+    setOpenCategoryDialog(true);
+  };
+  
+  const handleCloseDialog = () => {
+    setOpenCategoryDialog(false);
+  };
+  
+  const handleAddCategoryConfirm = () => {
+    if (newCategoryName && !formData.allocation[newCategoryName]) {
+      setAllocationCategories([...allocationCategories, newCategoryName]);
       setFormData(prev => ({
         ...prev,
         allocation: {
           ...prev.allocation,
-          [categoryName]: 0
+          [newCategoryName]: 0
         },
         vesting: {
           ...prev.vesting,
-          [categoryName]: {
+          [newCategoryName]: {
             tgePercentage: 10,
             cliffMonths: 6,
             vestingMonths: 12
@@ -192,12 +208,12 @@ const ProjectEdit = () => {
       }));
       
       // Log the updated form data
-      console.log('Added category:', categoryName);
+      console.log('Added category:', newCategoryName);
       console.log('Updated form data:', {
-        allocation: { ...formData.allocation, [categoryName]: 0 },
+        allocation: { ...formData.allocation, [newCategoryName]: 0 },
         vesting: { 
           ...formData.vesting, 
-          [categoryName]: {
+          [newCategoryName]: {
             tgePercentage: 10,
             cliffMonths: 6,
             vestingMonths: 12
@@ -205,6 +221,8 @@ const ProjectEdit = () => {
         }
       });
     }
+    
+    handleCloseDialog();
   };
 
   const handleRemoveCategory = (category) => {
@@ -611,6 +629,64 @@ const ProjectEdit = () => {
           </form>
         </Paper>
       </Box>
+      
+      {/* Add Category Dialog */}
+      <Dialog 
+        open={openCategoryDialog} 
+        onClose={handleCloseDialog}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: 3,
+            width: '100%',
+            maxWidth: '500px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" component="div">
+            Add Token Category
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Enter a name for the new token allocation category
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            margin="dense"
+            label="Category Name"
+            type="text"
+            variant="outlined"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleAddCategoryConfirm();
+              }
+            }}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button 
+            onClick={handleCloseDialog} 
+            color="primary"
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleAddCategoryConfirm} 
+            color="primary"
+            variant="contained"
+            disabled={!newCategoryName.trim()}
+          >
+            Add Category
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
