@@ -94,27 +94,51 @@ const ProjectEdit = () => {
     fetchProject();
   }, [id]);
 
-  const handleChange = (e) => {
-    const { name, value, checked } = e.target;
-    console.log('Field changed:', name, value, checked);
-    
-    if (name === 'isPublic') {
-      setFormData({ ...formData, [name]: checked });
-    } else if (name.startsWith('allocation.')) {
-      const allocationKey = name.split('.')[1];
-      const numValue = value === '' ? 0 : Number(value);
-      console.log('Allocation changed:', allocationKey, numValue);
-      
-      setFormData({
-        ...formData,
-        allocation: {
-          ...formData.allocation,
-          [allocationKey]: numValue,
-        },
-      });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleTokenomicsChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      tokenomics: {
+        ...prev.tokenomics,
+        [name]: value
+      }
+    }));
+  };
+
+  const handleAllocationChange = (category, value) => {
+    setFormData(prev => ({
+      ...prev,
+      allocation: {
+        ...prev.allocation,
+        [category]: value
+      }
+    }));
+  };
+
+  const handleVestingChange = (category, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      vesting: {
+        ...prev.vesting,
+        [category]: {
+          ...prev.vesting[category],
+          [field]: value
+        }
+      }
+    }));
+  };
+
+  const handleCategoryChange = (e) => {
+    const { value } = e.target;
+    setNewCategory(value);
   };
 
   const handleAddCategory = () => {
@@ -336,7 +360,7 @@ const ProjectEdit = () => {
                   name="name"
                   label="Project Name"
                   value={formData.name}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   required
                 />
               </Grid>
@@ -348,7 +372,7 @@ const ProjectEdit = () => {
                   name="description"
                   label="Project Description"
                   value={formData.description}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   required
                 />
               </Grid>
@@ -358,7 +382,7 @@ const ProjectEdit = () => {
                     <Switch
                       name="isPublic"
                       checked={formData.isPublic}
-                      onChange={handleChange}
+                      onChange={handleInputChange}
                       color="primary"
                     />
                   }
@@ -371,7 +395,7 @@ const ProjectEdit = () => {
                   name="tokenName"
                   label="Token Name"
                   value={formData.tokenName}
-                  onChange={handleChange}
+                  onChange={handleTokenomicsChange}
                   required
                 />
               </Grid>
@@ -381,7 +405,7 @@ const ProjectEdit = () => {
                   name="tokenSymbol"
                   label="Token Symbol"
                   value={formData.tokenSymbol}
-                  onChange={handleChange}
+                  onChange={handleTokenomicsChange}
                   required
                 />
               </Grid>
@@ -392,7 +416,7 @@ const ProjectEdit = () => {
                   name="totalSupply"
                   label="Total Supply"
                   value={formData.totalSupply}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   required
                 />
               </Grid>
@@ -418,7 +442,7 @@ const ProjectEdit = () => {
                             name={`allocation.${category}`}
                             label={category.charAt(0).toUpperCase() + category.slice(1)}
                             value={formData.allocation[category]}
-                            onChange={handleChange}
+                            onChange={(e) => handleAllocationChange(category, e.target.value)}
                             required
                           />
                           <Button
@@ -458,19 +482,7 @@ const ProjectEdit = () => {
                                   label="TGE Percentage"
                                   type="number"
                                   value={formData.vesting[category]?.tgePercentage || 0}
-                                  onChange={(e) => {
-                                    const value = parseFloat(e.target.value) || 0;
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      vesting: {
-                                        ...prev.vesting,
-                                        [category]: {
-                                          ...prev.vesting[category],
-                                          tgePercentage: value
-                                        }
-                                      }
-                                    }));
-                                  }}
+                                  onChange={(e) => handleVestingChange(category, 'tgePercentage', e.target.value)}
                                   InputProps={{
                                     endAdornment: <InputAdornment position="end">%</InputAdornment>,
                                   }}
@@ -482,19 +494,7 @@ const ProjectEdit = () => {
                                   label="Cliff Months"
                                   type="number"
                                   value={formData.vesting[category]?.cliffMonths || 6}
-                                  onChange={(e) => {
-                                    const value = parseInt(e.target.value) || 0;
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      vesting: {
-                                        ...prev.vesting,
-                                        [category]: {
-                                          ...prev.vesting[category],
-                                          cliffMonths: value
-                                        }
-                                      }
-                                    }));
-                                  }}
+                                  onChange={(e) => handleVestingChange(category, 'cliffMonths', e.target.value)}
                                   InputProps={{
                                     endAdornment: <InputAdornment position="end">months</InputAdornment>,
                                   }}
@@ -506,19 +506,7 @@ const ProjectEdit = () => {
                                   label="Vesting Months"
                                   type="number"
                                   value={formData.vesting[category]?.vestingMonths || 12}
-                                  onChange={(e) => {
-                                    const value = parseInt(e.target.value) || 0;
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      vesting: {
-                                        ...prev.vesting,
-                                        [category]: {
-                                          ...prev.vesting[category],
-                                          vestingMonths: value
-                                        }
-                                      }
-                                    }));
-                                  }}
+                                  onChange={(e) => handleVestingChange(category, 'vestingMonths', e.target.value)}
                                   InputProps={{
                                     endAdornment: <InputAdornment position="end">months</InputAdornment>,
                                   }}

@@ -149,18 +149,17 @@ const ProjectDetails = () => {
       categories.forEach(category => {
         const schedule = calculateVestingSchedule(category);
         const monthEntry = schedule.find(entry => entry.month === month);
+        const lastEntry = schedule[schedule.length - 1];
         
         if (monthEntry) {
-          // Eğer bu ay için veri varsa ekle
-          accumulatedPercentage += monthEntry.percentage;
-          monthData[category] = accumulatedPercentage;
+          // Bu ay için veri varsa ekle
+          monthData[category] = monthEntry.percentage;
+        } else if (lastEntry && month > lastEntry.month) {
+          // Vesting bitmiş, son değeri kullan
+          monthData[category] = lastEntry.percentage;
         } else {
-          // Eğer bu ay için veri yoksa, kategorinin son değerini kullan
-          const lastEntry = schedule[schedule.length - 1];
-          if (lastEntry && month > lastEntry.month) {
-            accumulatedPercentage += lastEntry.percentage;
-          }
-          monthData[category] = accumulatedPercentage;
+          // Henüz vesting başlamamış veya veri yok
+          monthData[category] = 0;
         }
       });
       
