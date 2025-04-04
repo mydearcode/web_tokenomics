@@ -56,7 +56,7 @@ const ProjectCreate = () => {
       });
       navigate('/projects');
     } catch (err) {
-      setError(err.response?.data?.message || 'Proje oluşturulamadı');
+      setError(err.response?.data?.message || 'Failed to create project');
     } finally {
       setLoading(false);
       setSubmitting(false);
@@ -67,7 +67,7 @@ const ProjectCreate = () => {
     <Container maxWidth="md">
       <Box sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Yeni Proje Oluştur
+          Create New Project
         </Typography>
 
         {error && (
@@ -87,7 +87,7 @@ const ProjectCreate = () => {
                 <Grid container spacing={3}>
                   <Grid item xs={12}>
                     <Typography variant="h6" gutterBottom>
-                      Temel Bilgiler
+                      Basic Information
                     </Typography>
                   </Grid>
 
@@ -95,7 +95,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Proje Adı"
+                      label="Project Name"
                       name="name"
                       error={touched.name && Boolean(errors.name)}
                       helperText={touched.name && errors.name}
@@ -108,7 +108,7 @@ const ProjectCreate = () => {
                       fullWidth
                       multiline
                       rows={4}
-                      label="Proje Açıklaması"
+                      label="Project Description"
                       name="description"
                       error={touched.description && Boolean(errors.description)}
                       helperText={touched.description && errors.description}
@@ -125,13 +125,13 @@ const ProjectCreate = () => {
                           onChange={(e) => setFieldValue('isPublic', e.target.checked)}
                         />
                       }
-                      label="Projeyi Herkese Açık Yap"
+                      label="Make project public"
                     />
                   </Grid>
 
                   <Grid item xs={12}>
                     <Typography variant="h6" gutterBottom>
-                      Token Bilgileri
+                      Token Information
                     </Typography>
                   </Grid>
 
@@ -139,7 +139,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Token Adı"
+                      label="Token Name"
                       name="tokenomics.tokenName"
                       error={touched.tokenomics?.tokenName && Boolean(errors.tokenomics?.tokenName)}
                       helperText={touched.tokenomics?.tokenName && errors.tokenomics?.tokenName}
@@ -150,7 +150,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Token Sembolü"
+                      label="Token Symbol"
                       name="tokenomics.tokenSymbol"
                       error={touched.tokenomics?.tokenSymbol && Boolean(errors.tokenomics?.tokenSymbol)}
                       helperText={touched.tokenomics?.tokenSymbol && errors.tokenomics?.tokenSymbol}
@@ -161,7 +161,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Toplam Token Arzı"
+                      label="Total Token Supply"
                       name="tokenomics.totalSupply"
                       type="number"
                       error={touched.tokenomics?.totalSupply && Boolean(errors.tokenomics?.totalSupply)}
@@ -171,7 +171,7 @@ const ProjectCreate = () => {
 
                   <Grid item xs={12}>
                     <Typography variant="h6" gutterBottom>
-                      Token Dağılımı (%)
+                      Token Allocation (%)
                     </Typography>
                   </Grid>
 
@@ -179,7 +179,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Takım"
+                      label="Team"
                       name="tokenomics.allocation.team"
                       type="number"
                       error={touched.tokenomics?.allocation?.team && Boolean(errors.tokenomics?.allocation?.team)}
@@ -191,7 +191,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Pazarlama"
+                      label="Marketing"
                       name="tokenomics.allocation.marketing"
                       type="number"
                       error={touched.tokenomics?.allocation?.marketing && Boolean(errors.tokenomics?.allocation?.marketing)}
@@ -203,7 +203,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Geliştirme"
+                      label="Development"
                       name="tokenomics.allocation.development"
                       type="number"
                       error={touched.tokenomics?.allocation?.development && Boolean(errors.tokenomics?.allocation?.development)}
@@ -215,7 +215,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Likidite"
+                      label="Liquidity"
                       name="tokenomics.allocation.liquidity"
                       type="number"
                       error={touched.tokenomics?.allocation?.liquidity && Boolean(errors.tokenomics?.allocation?.liquidity)}
@@ -227,7 +227,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Hazine"
+                      label="Treasury"
                       name="tokenomics.allocation.treasury"
                       type="number"
                       error={touched.tokenomics?.allocation?.treasury && Boolean(errors.tokenomics?.allocation?.treasury)}
@@ -239,7 +239,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Topluluk"
+                      label="Community"
                       name="tokenomics.allocation.community"
                       type="number"
                       error={touched.tokenomics?.allocation?.community && Boolean(errors.tokenomics?.allocation?.community)}
@@ -251,7 +251,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="Danışmanlar"
+                      label="Advisors"
                       name="tokenomics.allocation.advisors"
                       type="number"
                       error={touched.tokenomics?.allocation?.advisors && Boolean(errors.tokenomics?.allocation?.advisors)}
@@ -263,7 +263,7 @@ const ProjectCreate = () => {
                     <Field
                       as={TextField}
                       fullWidth
-                      label="İş Ortakları"
+                      label="Partners"
                       name="tokenomics.allocation.partners"
                       type="number"
                       error={touched.tokenomics?.allocation?.partners && Boolean(errors.tokenomics?.allocation?.partners)}
@@ -280,7 +280,7 @@ const ProjectCreate = () => {
                       size="large"
                       disabled={isSubmitting || loading}
                     >
-                      {loading ? <CircularProgress size={24} /> : 'Proje Oluştur'}
+                      {loading ? <CircularProgress size={24} /> : 'Create Project'}
                     </Button>
                   </Grid>
                 </Grid>

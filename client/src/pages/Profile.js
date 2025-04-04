@@ -30,9 +30,9 @@ const Profile = () => {
       setProfileSuccess('');
       setLoading(true);
       await updateProfile(values.name, values.email);
-      setProfileSuccess('Profil başarıyla güncellendi');
+      setProfileSuccess('Profile updated successfully');
     } catch (err) {
-      setProfileError(err.response?.data?.message || 'Profil güncellenemedi');
+      setProfileError(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setLoading(false);
       setSubmitting(false);
@@ -45,10 +45,10 @@ const Profile = () => {
       setPasswordSuccess('');
       setLoading(true);
       await updatePassword(values.currentPassword, values.newPassword);
-      setPasswordSuccess('Şifre başarıyla güncellendi');
+      setPasswordSuccess('Password updated successfully');
       resetForm();
     } catch (err) {
-      setPasswordError(err.response?.data?.message || 'Şifre güncellenemedi');
+      setPasswordError(err.response?.data?.message || 'Failed to update password');
     } finally {
       setLoading(false);
       setSubmitting(false);
@@ -59,14 +59,14 @@ const Profile = () => {
     <Container maxWidth="md">
       <Box sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Profil Ayarları
+          Profile Settings
         </Typography>
 
         <Grid container spacing={4}>
           <Grid item xs={12} md={6}>
             <Paper elevation={3} sx={{ p: 4 }}>
               <Typography variant="h6" gutterBottom>
-                Profil Bilgileri
+                Profile Information
               </Typography>
 
               {profileError && (
@@ -96,7 +96,7 @@ const Profile = () => {
                       as={TextField}
                       fullWidth
                       margin="normal"
-                      label="Ad Soyad"
+                      label="Full Name"
                       name="name"
                       error={touched.name && Boolean(errors.name)}
                       helperText={touched.name && errors.name}
@@ -106,7 +106,7 @@ const Profile = () => {
                       as={TextField}
                       fullWidth
                       margin="normal"
-                      label="E-posta"
+                      label="Email"
                       name="email"
                       type="email"
                       error={touched.email && Boolean(errors.email)}
@@ -122,7 +122,7 @@ const Profile = () => {
                       disabled={isSubmitting || loading}
                       sx={{ mt: 3 }}
                     >
-                      {loading ? <CircularProgress size={24} /> : 'Profili Güncelle'}
+                      {loading ? <CircularProgress size={24} /> : 'Update Profile'}
                     </Button>
                   </Form>
                 )}
@@ -133,7 +133,7 @@ const Profile = () => {
           <Grid item xs={12} md={6}>
             <Paper elevation={3} sx={{ p: 4 }}>
               <Typography variant="h6" gutterBottom>
-                Şifre Değiştir
+                Change Password
               </Typography>
 
               {passwordError && (
@@ -163,7 +163,7 @@ const Profile = () => {
                       as={TextField}
                       fullWidth
                       margin="normal"
-                      label="Mevcut Şifre"
+                      label="Current Password"
                       name="currentPassword"
                       type="password"
                       error={touched.currentPassword && Boolean(errors.currentPassword)}
@@ -174,7 +174,7 @@ const Profile = () => {
                       as={TextField}
                       fullWidth
                       margin="normal"
-                      label="Yeni Şifre"
+                      label="New Password"
                       name="newPassword"
                       type="password"
                       error={touched.newPassword && Boolean(errors.newPassword)}
@@ -185,7 +185,7 @@ const Profile = () => {
                       as={TextField}
                       fullWidth
                       margin="normal"
-                      label="Yeni Şifre Tekrar"
+                      label="Confirm New Password"
                       name="confirmNewPassword"
                       type="password"
                       error={touched.confirmNewPassword && Boolean(errors.confirmNewPassword)}
@@ -201,7 +201,7 @@ const Profile = () => {
                       disabled={isSubmitting || loading}
                       sx={{ mt: 3 }}
                     >
-                      {loading ? <CircularProgress size={24} /> : 'Şifreyi Güncelle'}
+                      {loading ? <CircularProgress size={24} /> : 'Update Password'}
                     </Button>
                   </Form>
                 )}

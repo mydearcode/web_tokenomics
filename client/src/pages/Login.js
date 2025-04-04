@@ -29,7 +29,7 @@ const Login = () => {
       await login(values.email, values.password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Giriş yapılamadı');
+      setError(err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
       setSubmitting(false);
@@ -49,7 +49,7 @@ const Login = () => {
       >
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Typography component="h1" variant="h5" align="center" gutterBottom>
-            Giriş Yap
+            Sign In
           </Typography>
           
           {error && (
@@ -69,7 +69,7 @@ const Login = () => {
                   as={TextField}
                   fullWidth
                   margin="normal"
-                  label="E-posta"
+                  label="Email"
                   name="email"
                   type="email"
                   autoComplete="email"
@@ -81,7 +81,7 @@ const Login = () => {
                   as={TextField}
                   fullWidth
                   margin="normal"
-                  label="Şifre"
+                  label="Password"
                   name="password"
                   type="password"
                   autoComplete="current-password"
@@ -98,12 +98,12 @@ const Login = () => {
                   disabled={isSubmitting || loading}
                   sx={{ mt: 3, mb: 2 }}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Giriş Yap'}
+                  {loading ? <CircularProgress size={24} /> : 'Sign In'}
                 </Button>
 
                 <Box textAlign="center">
                   <Link component={RouterLink} to="/register" variant="body2">
-                    Hesabınız yok mu? Kayıt olun
+                    Don't have an account? Sign up
                   </Link>
                 </Box>
               </Form>

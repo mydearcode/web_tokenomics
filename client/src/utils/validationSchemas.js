@@ -1,94 +1,94 @@
 import * as Yup from 'yup';
 
-// Kullanıcı kayıt formu doğrulama şeması
+// User registration form validation schema
 export const registerSchema = Yup.object().shape({
   name: Yup.string()
-    .min(2, 'Ad soyad en az 2 karakter olmalıdır')
-    .max(50, 'Ad soyad en fazla 50 karakter olabilir')
-    .required('Ad soyad zorunludur'),
+    .min(2, 'Name must be at least 2 characters')
+    .max(50, 'Name cannot exceed 50 characters')
+    .required('Name is required'),
   email: Yup.string()
-    .email('Geçerli bir e-posta adresi giriniz')
-    .required('E-posta adresi zorunludur'),
+    .email('Please enter a valid email address')
+    .required('Email is required'),
   password: Yup.string()
-    .min(8, 'Şifre en az 8 karakter olmalıdır')
+    .min(8, 'Password must be at least 8 characters')
     .matches(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-      'Şifre en az bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir'
+      'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
     )
-    .required('Şifre zorunludur'),
+    .required('Password is required'),
   confirmPassword: Yup.string()
-    .oneOf([Yup.ref('password'), null], 'Şifreler eşleşmiyor')
-    .required('Şifre tekrarı zorunludur'),
+    .oneOf([Yup.ref('password'), null], 'Passwords must match')
+    .required('Please confirm your password'),
 });
 
-// Kullanıcı giriş formu doğrulama şeması
+// User login form validation schema
 export const loginSchema = Yup.object().shape({
   email: Yup.string()
-    .email('Geçerli bir e-posta adresi giriniz')
-    .required('E-posta adresi zorunludur'),
+    .email('Please enter a valid email address')
+    .required('Email is required'),
   password: Yup.string()
-    .required('Şifre zorunludur'),
+    .required('Password is required'),
 });
 
-// Proje oluşturma/düzenleme formu doğrulama şeması
+// Project creation/editing form validation schema
 export const projectSchema = Yup.object().shape({
   name: Yup.string()
-    .min(2, 'Proje adı en az 2 karakter olmalıdır')
-    .max(100, 'Proje adı en fazla 100 karakter olabilir')
-    .required('Proje adı zorunludur'),
+    .min(2, 'Project name must be at least 2 characters')
+    .max(100, 'Project name cannot exceed 100 characters')
+    .required('Project name is required'),
   description: Yup.string()
-    .min(10, 'Proje açıklaması en az 10 karakter olmalıdır')
-    .max(1000, 'Proje açıklaması en fazla 1000 karakter olabilir')
-    .required('Proje açıklaması zorunludur'),
+    .min(10, 'Project description must be at least 10 characters')
+    .max(1000, 'Project description cannot exceed 1000 characters')
+    .required('Project description is required'),
   isPublic: Yup.boolean(),
   tokenomics: Yup.object().shape({
     tokenName: Yup.string()
-      .min(2, 'Token adı en az 2 karakter olmalıdır')
-      .max(50, 'Token adı en fazla 50 karakter olabilir')
-      .required('Token adı zorunludur'),
+      .min(2, 'Token name must be at least 2 characters')
+      .max(50, 'Token name cannot exceed 50 characters')
+      .required('Token name is required'),
     tokenSymbol: Yup.string()
-      .min(2, 'Token sembolü en az 2 karakter olmalıdır')
-      .max(10, 'Token sembolü en fazla 10 karakter olabilir')
-      .required('Token sembolü zorunludur'),
+      .min(2, 'Token symbol must be at least 2 characters')
+      .max(10, 'Token symbol cannot exceed 10 characters')
+      .required('Token symbol is required'),
     totalSupply: Yup.number()
-      .min(1, 'Toplam token arzı 0\'dan büyük olmalıdır')
-      .required('Toplam token arzı zorunludur'),
+      .min(1, 'Total supply must be greater than 0')
+      .required('Total supply is required'),
     allocation: Yup.object().shape({
       team: Yup.number()
-        .min(0, 'Takım payı 0\'dan küçük olamaz')
-        .max(100, 'Takım payı 100\'den büyük olamaz')
-        .required('Takım payı zorunludur'),
+        .min(0, 'Team allocation cannot be negative')
+        .max(100, 'Team allocation cannot exceed 100%')
+        .required('Team allocation is required'),
       marketing: Yup.number()
-        .min(0, 'Pazarlama payı 0\'dan küçük olamaz')
-        .max(100, 'Pazarlama payı 100\'den büyük olamaz')
-        .required('Pazarlama payı zorunludur'),
+        .min(0, 'Marketing allocation cannot be negative')
+        .max(100, 'Marketing allocation cannot exceed 100%')
+        .required('Marketing allocation is required'),
       development: Yup.number()
-        .min(0, 'Geliştirme payı 0\'dan küçük olamaz')
-        .max(100, 'Geliştirme payı 100\'den büyük olamaz')
-        .required('Geliştirme payı zorunludur'),
+        .min(0, 'Development allocation cannot be negative')
+        .max(100, 'Development allocation cannot exceed 100%')
+        .required('Development allocation is required'),
       liquidity: Yup.number()
-        .min(0, 'Likidite payı 0\'dan küçük olamaz')
-        .max(100, 'Likidite payı 100\'den büyük olamaz')
-        .required('Likidite payı zorunludur'),
+        .min(0, 'Liquidity allocation cannot be negative')
+        .max(100, 'Liquidity allocation cannot exceed 100%')
+        .required('Liquidity allocation is required'),
       treasury: Yup.number()
-        .min(0, 'Hazine payı 0\'dan küçük olamaz')
-        .max(100, 'Hazine payı 100\'den büyük olamaz')
-        .required('Hazine payı zorunludur'),
+        .min(0, 'Treasury allocation cannot be negative')
+        .max(100, 'Treasury allocation cannot exceed 100%')
+        .required('Treasury allocation is required'),
       community: Yup.number()
-        .min(0, 'Topluluk payı 0\'dan küçük olamaz')
-        .max(100, 'Topluluk payı 100\'den büyük olamaz')
-        .required('Topluluk payı zorunludur'),
+        .min(0, 'Community allocation cannot be negative')
+        .max(100, 'Community allocation cannot exceed 100%')
+        .required('Community allocation is required'),
       advisors: Yup.number()
-        .min(0, 'Danışmanlar payı 0\'dan küçük olamaz')
-        .max(100, 'Danışmanlar payı 100\'den büyük olamaz')
-        .required('Danışmanlar payı zorunludur'),
+        .min(0, 'Advisors allocation cannot be negative')
+        .max(100, 'Advisors allocation cannot exceed 100%')
+        .required('Advisors allocation is required'),
       partners: Yup.number()
-        .min(0, 'İş ortakları payı 0\'dan küçük olamaz')
-        .max(100, 'İş ortakları payı 100\'den büyük olamaz')
-        .required('İş ortakları payı zorunludur'),
+        .min(0, 'Partners allocation cannot be negative')
+        .max(100, 'Partners allocation cannot exceed 100%')
+        .required('Partners allocation is required'),
     }).test(
       'total-allocation',
-      'Token dağılımı toplamı 100 olmalıdır',
+      'Total allocation must equal 100%',
       (value) => {
         const total = Object.values(value).reduce((sum, val) => sum + val, 0);
         return Math.abs(total - 100) < 0.01;
@@ -97,29 +97,29 @@ export const projectSchema = Yup.object().shape({
   }),
 });
 
-// Profil güncelleme formu doğrulama şeması
+// Profile update form validation schema
 export const profileSchema = Yup.object().shape({
   name: Yup.string()
-    .min(2, 'Ad soyad en az 2 karakter olmalıdır')
-    .max(50, 'Ad soyad en fazla 50 karakter olabilir')
-    .required('Ad soyad zorunludur'),
+    .min(2, 'Name must be at least 2 characters')
+    .max(50, 'Name cannot exceed 50 characters')
+    .required('Name is required'),
   email: Yup.string()
-    .email('Geçerli bir e-posta adresi giriniz')
-    .required('E-posta adresi zorunludur'),
+    .email('Please enter a valid email address')
+    .required('Email is required'),
 });
 
-// Şifre değiştirme formu doğrulama şeması
+// Password change form validation schema
 export const passwordChangeSchema = Yup.object().shape({
   currentPassword: Yup.string()
-    .required('Mevcut şifre zorunludur'),
+    .required('Current password is required'),
   newPassword: Yup.string()
-    .min(8, 'Şifre en az 8 karakter olmalıdır')
+    .min(8, 'Password must be at least 8 characters')
     .matches(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-      'Şifre en az bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir'
+      'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
     )
-    .required('Yeni şifre zorunludur'),
+    .required('New password is required'),
   confirmNewPassword: Yup.string()
-    .oneOf([Yup.ref('newPassword'), null], 'Şifreler eşleşmiyor')
-    .required('Şifre tekrarı zorunludur'),
+    .oneOf([Yup.ref('newPassword'), null], 'Passwords must match')
+    .required('Please confirm your new password'),
 }); 

@@ -29,7 +29,7 @@ const Register = () => {
       await register(values.name, values.email, values.password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Kayıt işlemi başarısız oldu');
+      setError(err.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);
       setSubmitting(false);
@@ -49,7 +49,7 @@ const Register = () => {
       >
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Typography component="h1" variant="h5" align="center" gutterBottom>
-            Kayıt Ol
+            Sign Up
           </Typography>
           
           {error && (
@@ -74,7 +74,7 @@ const Register = () => {
                   as={TextField}
                   fullWidth
                   margin="normal"
-                  label="Ad Soyad"
+                  label="Full Name"
                   name="name"
                   autoComplete="name"
                   error={touched.name && Boolean(errors.name)}
@@ -85,7 +85,7 @@ const Register = () => {
                   as={TextField}
                   fullWidth
                   margin="normal"
-                  label="E-posta"
+                  label="Email"
                   name="email"
                   type="email"
                   autoComplete="email"
@@ -97,7 +97,7 @@ const Register = () => {
                   as={TextField}
                   fullWidth
                   margin="normal"
-                  label="Şifre"
+                  label="Password"
                   name="password"
                   type="password"
                   autoComplete="new-password"
@@ -109,7 +109,7 @@ const Register = () => {
                   as={TextField}
                   fullWidth
                   margin="normal"
-                  label="Şifre Tekrar"
+                  label="Confirm Password"
                   name="confirmPassword"
                   type="password"
                   autoComplete="new-password"
@@ -126,12 +126,12 @@ const Register = () => {
                   disabled={isSubmitting || loading}
                   sx={{ mt: 3, mb: 2 }}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Kayıt Ol'}
+                  {loading ? <CircularProgress size={24} /> : 'Sign Up'}
                 </Button>
 
                 <Box textAlign="center">
                   <Link component={RouterLink} to="/login" variant="body2">
-                    Zaten hesabınız var mı? Giriş yapın
+                    Already have an account? Sign in
                   </Link>
                 </Box>
               </Form>
