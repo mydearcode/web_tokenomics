@@ -35,13 +35,20 @@ const ProjectDetails = () => {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedVestingCategory, setSelectedVestingCategory] = useState('team');
+  const [selectedVestingCategory, setSelectedVestingCategory] = useState('');
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
         const data = await getProject(id);
         setProject(data);
+        // Set the first allocation category as the default selected category
+        if (data.tokenomics?.allocation) {
+          const categories = Object.keys(data.tokenomics.allocation);
+          if (categories.length > 0) {
+            setSelectedVestingCategory(categories[0]);
+          }
+        }
       } catch (err) {
         setError('Failed to load project');
         console.error('Error loading project:', err);
@@ -67,33 +74,52 @@ const ProjectDetails = () => {
 
   // Vesting hesaplama fonksiyonu
   const calculateVestingSchedule = (category) => {
-    if (!project?.vesting?.[category]) return [];
-    
+    if (!project?.vesting?.[category]) {
+      return [];
+    }
+
     const vestingData = project.vesting[category];
-    const allocation = project.tokenomics?.allocation?.[category]?.percentage || 0;
-    const tgeAmount = (allocation * vestingData.tgePercentage) / 100;
-    const remainingAmount = allocation - tgeAmount;
+    const allocationData = project.tokenomics.allocation[category];
+    
+    if (!allocationData) {
+      return [];
+    }
+
+    const totalTokens = (project.tokenomics.totalSupply * allocationData.percentage) / 100;
+    const tgeAmount = (totalTokens * vestingData.tgePercentage) / 100;
+    const remainingAmount = totalTokens - tgeAmount;
     const monthlyVesting = remainingAmount / vestingData.vestingMonths;
     
     const schedule = [];
     
-    // TGE anındaki miktar
+    // TGE (M0) - Artık cliff süresine dahil edilecek
     schedule.push({
       month: 0,
       percentage: vestingData.tgePercentage,
       amount: tgeAmount
     });
     
-    // Cliff süresi sonrası vesting
-    for (let i = 1; i <= vestingData.vestingMonths; i++) {
+    // Cliff dönemi (TGE dahil)
+    // TGE zaten M0'da olduğu için, cliff süresini 1 azaltıyoruz
+    for (let i = 1; i < vestingData.cliffMonths; i++) {
+      schedule.push({
+        month: i,
+        percentage: vestingData.tgePercentage,
+        amount: 0
+      });
+    }
+    
+    // Vesting dönemi
+    let releasedAmount = tgeAmount;
+    for (let i = 0; i < vestingData.vestingMonths; i++) {
       const month = vestingData.cliffMonths + i;
-      const percentage = (vestingData.tgePercentage + (i * (100 - vestingData.tgePercentage) / vestingData.vestingMonths)).toFixed(2);
-      const amount = tgeAmount + (monthlyVesting * i);
+      releasedAmount += monthlyVesting;
+      const percentage = (releasedAmount / totalTokens) * 100;
       
       schedule.push({
         month,
-        percentage: parseFloat(percentage),
-        amount: parseFloat(amount.toFixed(2))
+        percentage: parseFloat(percentage.toFixed(2)),
+        amount: parseFloat(releasedAmount.toFixed(2))
       });
     }
     
@@ -248,13 +274,13 @@ const ProjectDetails = () => {
             value={selectedVestingCategory}
             onChange={(e, newValue) => setSelectedVestingCategory(newValue)}
           >
-            {['team', 'advisors', 'partners'].map((category) => (
+            {project?.tokenomics?.allocation ? Object.keys(project.tokenomics.allocation).map((category) => (
               <Tab
                 key={category}
                 label={category.charAt(0).toUpperCase() + category.slice(1)}
                 value={category}
               />
-            ))}
+            )) : null}
           </Tabs>
         </Box>
 

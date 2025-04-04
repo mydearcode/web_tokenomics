@@ -217,8 +217,9 @@ const ProjectCreate = () => {
       amount: tgeAmount
     });
     
-    // Cliff dönemi (M1-M6: 0 token)
-    for (let i = 1; i <= vestingData.cliffMonths; i++) {
+    // Cliff dönemi (TGE dahil)
+    // TGE zaten M0'da olduğu için, cliff süresini 1 azaltıyoruz
+    for (let i = 1; i < vestingData.cliffMonths; i++) {
       schedule.push({
         month: i,
         percentage: vestingData.tgePercentage,
@@ -226,9 +227,9 @@ const ProjectCreate = () => {
       });
     }
     
-    // Vesting dönemi (M7-M12: her ay eşit miktar)
+    // Vesting dönemi
     let releasedAmount = tgeAmount; // TGE'de açılan miktar
-    for (let i = 1; i <= vestingData.vestingMonths; i++) {
+    for (let i = 0; i < vestingData.vestingMonths; i++) {
       const month = vestingData.cliffMonths + i;
       releasedAmount += monthlyVesting; // Her ay eşit miktar ekle
       const percentage = (releasedAmount / totalTokens) * 100;
