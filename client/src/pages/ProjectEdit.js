@@ -136,11 +136,6 @@ const ProjectEdit = () => {
     }));
   };
 
-  const handleCategoryChange = (e) => {
-    const { value } = e.target;
-    setNewCategory(value);
-  };
-
   const handleAddCategory = () => {
     const categoryName = prompt('Enter category name:');
     if (categoryName && !formData.allocation[categoryName]) {

@@ -12,13 +12,29 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
-import { getProjects } from '../services/api';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Visibility as ViewIcon
+} from '@mui/icons-material';
+import { getProjects, deleteProject } from '../services/api';
 
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const handleDelete = async (projectId) => {
+    if (window.confirm('Are you sure you want to delete this project?')) {
+      try {
+        await deleteProject(projectId);
+        setProjects(projects.filter(p => p._id !== projectId));
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to delete project');
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -120,15 +136,25 @@ const Dashboard = () => {
                     component={RouterLink}
                     to={`/projects/${project._id}`}
                     size="small"
+                    startIcon={<ViewIcon />}
                   >
-                    View Details
+                    View
                   </Button>
                   <Button
                     component={RouterLink}
                     to={`/projects/${project._id}/edit`}
                     size="small"
+                    startIcon={<EditIcon />}
                   >
                     Edit
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    onClick={() => handleDelete(project._id)}
+                    startIcon={<DeleteIcon />}
+                  >
+                    Delete
                   </Button>
                 </CardActions>
               </Card>

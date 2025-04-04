@@ -19,8 +19,11 @@ import {
   Search as SearchIcon,
   Public as PublicIcon,
   Lock as LockIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Visibility as ViewIcon
 } from '@mui/icons-material';
-import axios from 'axios';
+import { getProjects, deleteProject } from '../services/api';
 
 const ProjectList = () => {
   const [projects, setProjects] = useState([]);
@@ -28,11 +31,22 @@ const ProjectList = () => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  const handleDelete = async (projectId) => {
+    if (window.confirm('Are you sure you want to delete this project?')) {
+      try {
+        await deleteProject(projectId);
+        setProjects(projects.filter(p => p._id !== projectId));
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to delete project');
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await axios.get('/api/projects');
-        setProjects(response.data.data);
+        const response = await getProjects();
+        setProjects(response.data || []);
         setLoading(false);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to fetch projects');
@@ -159,16 +173,30 @@ const ProjectList = () => {
                     size="small"
                     component={RouterLink}
                     to={`/projects/${project._id}`}
+                    startIcon={<ViewIcon />}
                   >
-                    View Details
+                    View
                   </Button>
-                  <Button
-                    size="small"
-                    component={RouterLink}
-                    to={`/projects/${project._id}/edit`}
-                  >
-                    Edit
-                  </Button>
+                  {project.isOwner && (
+                    <>
+                      <Button
+                        size="small"
+                        component={RouterLink}
+                        to={`/projects/${project._id}/edit`}
+                        startIcon={<EditIcon />}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => handleDelete(project._id)}
+                        startIcon={<DeleteIcon />}
+                      >
+                        Delete
+                      </Button>
+                    </>
+                  )}
                 </CardActions>
               </Card>
             </Grid>

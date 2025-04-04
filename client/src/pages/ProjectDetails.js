@@ -88,8 +88,8 @@ const ProjectDetails = () => {
     }
 
     const categoryAllocation = allocationData.percentage; // Kategorinin toplam allocation yüzdesi
-    const tgePercentage = (vestingData.tgePercentage * categoryAllocation) / 100; // TGE'de açılacak miktar
-    const remainingPercentage = categoryAllocation - tgePercentage; // Vesting ile açılacak kalan miktar
+    const tgePercentage = vestingData.tgePercentage; // TGE'de açılacak yüzde (kategorinin kendi yüzdesinden)
+    const remainingPercentage = 100 - tgePercentage; // Vesting ile açılacak kalan yüzde
     const monthlyPercentage = remainingPercentage / vestingData.vestingMonths; // Her ay açılacak yüzde
     
     const schedule = [];
@@ -98,7 +98,7 @@ const ProjectDetails = () => {
     schedule.push({
       month: 0,
       percentage: tgePercentage,
-      amount: (project.tokenomics.totalSupply * tgePercentage) / 100
+      amount: (project.tokenomics.totalSupply * categoryAllocation * tgePercentage) / 10000
     });
     
     // Cliff dönemi
@@ -106,7 +106,7 @@ const ProjectDetails = () => {
       schedule.push({
         month: i,
         percentage: tgePercentage,
-        amount: (project.tokenomics.totalSupply * tgePercentage) / 100
+        amount: (project.tokenomics.totalSupply * categoryAllocation * tgePercentage) / 10000
       });
     }
     
@@ -118,8 +118,8 @@ const ProjectDetails = () => {
       
       schedule.push({
         month,
-        percentage: Math.min(currentPercentage, categoryAllocation), // Maksimum kategori allocation'ını geçmemeli
-        amount: (project.tokenomics.totalSupply * Math.min(currentPercentage, categoryAllocation)) / 100
+        percentage: Math.min(currentPercentage, 100), // Maksimum 100%'ü geçmemeli
+        amount: (project.tokenomics.totalSupply * categoryAllocation * Math.min(currentPercentage, 100)) / 10000
       });
     }
     
@@ -143,26 +143,34 @@ const ProjectDetails = () => {
     // Her ay için veri oluştur
     for (let month = 0; month <= maxMonths; month++) {
       const monthData = { month };
-      let accumulatedPercentage = 0;
+      let totalCirculation = 0;
       
       // Her kategori için o aydaki yüzdeyi ekle
       categories.forEach(category => {
         const schedule = calculateVestingSchedule(category);
         const monthEntry = schedule.find(entry => entry.month === month);
         const lastEntry = schedule[schedule.length - 1];
+        const categoryAllocation = project.tokenomics.allocation[category].percentage;
         
+        let categoryCirculation;
         if (monthEntry) {
           // Bu ay için veri varsa ekle
-          monthData[category] = monthEntry.percentage;
+          categoryCirculation = (monthEntry.percentage * categoryAllocation) / 100;
+          monthData[category] = categoryCirculation;
         } else if (lastEntry && month > lastEntry.month) {
           // Vesting bitmiş, son değeri kullan
-          monthData[category] = lastEntry.percentage;
+          categoryCirculation = (lastEntry.percentage * categoryAllocation) / 100;
+          monthData[category] = categoryCirculation;
         } else {
           // Henüz vesting başlamamış veya veri yok
+          categoryCirculation = 0;
           monthData[category] = 0;
         }
+        
+        totalCirculation += categoryCirculation;
       });
       
+      monthData.totalCirculation = totalCirculation;
       combinedData.push(monthData);
     }
     
@@ -347,7 +355,7 @@ const ProjectDetails = () => {
         <Divider sx={{ my: 3 }} />
 
         <Typography variant="h5" gutterBottom>
-          Vesting Schedule
+          Vesting Schedule (Month 0 - {allCategoriesVestingData[allCategoriesVestingData.length - 1]?.month}, Total Supply: {project.tokenomics?.totalSupply?.toLocaleString()})
         </Typography>
         
         {/* Combined Vesting Schedule Chart */}
@@ -374,9 +382,9 @@ const ProjectDetails = () => {
               />
               <Tooltip 
                 formatter={(value, name) => {
+                  if (name === 'totalCirculation') return [`${parseFloat(value).toFixed(2)}% Total Circulation`, 'Total'];
                   const currentValue = parseFloat(value).toFixed(2);
-                  const categoryAllocation = project.tokenomics.allocation[name].percentage;
-                  return [`${currentValue}% of ${categoryAllocation}%`, name];
+                  return [`${currentValue}%`, name];
                 }}
                 labelFormatter={(label) => `Month ${label}`}
               />
@@ -392,6 +400,14 @@ const ProjectDetails = () => {
                   fill={COLORS[index % COLORS.length]}
                 />
               ))}
+              <Area
+                type="monotone"
+                dataKey="totalCirculation"
+                name="totalCirculation"
+                stroke="#000000"
+                fill="none"
+                strokeDasharray="5 5"
+              />
             </AreaChart>
           </ResponsiveContainer>
         </Box>

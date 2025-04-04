@@ -52,40 +52,10 @@ const ProjectSchema = new mongoose.Schema({
     
     // Allocation and Distribution
     allocation: {
-      team: {
+      type: Map,
+      of: {
         percentage: Number,
-        vestingPeriod: Number,
-        cliff: Number
-      },
-      advisors: {
-        percentage: Number,
-        vestingPeriod: Number,
-        cliff: Number
-      },
-      investors: {
-        percentage: Number,
-        vestingPeriod: Number,
-        cliff: Number
-      },
-      community: {
-        percentage: Number,
-        vestingPeriod: Number,
-        cliff: Number
-      },
-      treasury: {
-        percentage: Number,
-        vestingPeriod: Number,
-        cliff: Number
-      },
-      marketing: {
-        percentage: Number,
-        vestingPeriod: Number,
-        cliff: Number
-      },
-      liquidity: {
-        percentage: Number,
-        vestingPeriod: Number,
-        cliff: Number
+        amount: Number
       }
     },
     
@@ -122,6 +92,14 @@ const ProjectSchema = new mongoose.Schema({
           default: false
         }
       }
+    }
+  },
+  vesting: {
+    type: Map,
+    of: {
+      tgePercentage: Number,
+      cliffMonths: Number,
+      vestingMonths: Number
     }
   },
   isPublic: {

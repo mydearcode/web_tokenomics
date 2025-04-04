@@ -47,17 +47,6 @@ const ProjectCreate = () => {
     }));
   };
 
-  const handleTokenomicsChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      tokenomics: {
-        ...prev.tokenomics,
-        [name]: value
-      }
-    }));
-  };
-
   const handleAllocationChange = (category, value) => {
     setFormData(prev => ({
       ...prev,
@@ -79,11 +68,6 @@ const ProjectCreate = () => {
         }
       }
     }));
-  };
-
-  const handleCategoryChange = (e) => {
-    const { value } = e.target;
-    setNewCategory(value);
   };
 
   const handleAddCategory = () => {
