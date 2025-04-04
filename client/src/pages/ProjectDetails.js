@@ -136,7 +136,8 @@ const ProjectDetails = () => {
     // Vesting dönemi
     let currentPercentage = tgePercentage;
     for (let i = 0; i < vestingData.vestingMonths; i++) {
-      const month = vestingData.cliffMonths + i;
+      // Vesting aylarını cliff sonrasından başlat ama doğru ay numarasını kullan
+      const month = Number(vestingData.cliffMonths) + i;
       currentPercentage += monthlyPercentage;
       
       schedule.push({

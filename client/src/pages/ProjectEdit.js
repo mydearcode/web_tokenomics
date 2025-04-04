@@ -324,7 +324,6 @@ const ProjectEdit = () => {
     });
     
     // Cliff dönemi (TGE dahil)
-    // TGE zaten M0'da olduğu için, cliff süresini 1 azaltıyoruz
     for (let i = 1; i < vestingData.cliffMonths; i++) {
       schedule.push({
         month: i,
@@ -337,7 +336,8 @@ const ProjectEdit = () => {
     // Vesting dönemi
     let releasedAmount = tgeAmount; // TGE'de açılan miktar
     for (let i = 0; i < vestingData.vestingMonths; i++) {
-      const month = vestingData.cliffMonths + i;
+      // Vesting aylarını cliff sonrasından başlat ama doğru ay numarasını kullan
+      const month = Number(vestingData.cliffMonths) + i;
       releasedAmount += monthlyVesting; // Her ay eşit miktar ekle
       const percentage = (releasedAmount / totalTokens) * 100;
       
