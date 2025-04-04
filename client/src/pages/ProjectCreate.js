@@ -123,15 +123,12 @@ const ProjectCreate = () => {
       return;
     }
     
-    console.log('Form submitted with values:', formData);
-    
     try {
       setLoading(true);
       setError(null);
       
       // Validate total allocation
       const totalAllocation = Object.values(formData.allocation).reduce((sum, value) => sum + Number(value), 0);
-      console.log('Total allocation:', totalAllocation);
       
       if (Math.abs(totalAllocation - 100) > 0.01) {
         setError(`Total allocation must equal 100%. Current total: ${totalAllocation}%`);
@@ -163,25 +160,35 @@ const ProjectCreate = () => {
           tokenName: formData.tokenName,
           tokenSymbol: formData.tokenSymbol,
           totalSupply: Number(formData.totalSupply),
-          allocation: formData.allocation
+          allocation: Object.fromEntries(
+            Object.entries(formData.allocation).map(([key, value]) => [
+              key,
+              {
+                percentage: Number(value),
+                amount: (Number(formData.totalSupply) * Number(value)) / 100
+              }
+            ])
+          )
         },
-        vesting: formData.vesting
+        vesting: Object.fromEntries(
+          Object.entries(formData.vesting).map(([key, value]) => [
+            key,
+            {
+              tgePercentage: Number(value.tgePercentage),
+              cliffMonths: Number(value.cliffMonths),
+              vestingMonths: Number(value.vestingMonths)
+            }
+          ])
+        )
       };
-      
-      console.log('Creating project with data:', JSON.stringify(projectData, null, 2));
       
       const response = await createProject(projectData);
       
-      console.log('Project created successfully:', response);
-      
       // Add a small delay before navigating to ensure the project is saved
-      console.log('Navigating to dashboard...');
       setTimeout(() => {
-        console.log('Navigation timeout completed, redirecting to dashboard');
         navigate('/');
       }, 500);
     } catch (err) {
-      console.error('Error creating project:', err);
       setError(err.response?.data?.message || 'Failed to create project. Please try again.');
     } finally {
       setLoading(false);
