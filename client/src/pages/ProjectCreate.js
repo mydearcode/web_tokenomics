@@ -221,6 +221,7 @@ const ProjectCreate = () => {
     // M0 (TGE)
     schedule.push({
       month: 0,
+      monthDisplay: "M0",
       percentage: vestingData.tgePercentage,
       amount: tgeAmount
     });
@@ -230,6 +231,7 @@ const ProjectCreate = () => {
     for (let i = 1; i < vestingData.cliffMonths; i++) {
       schedule.push({
         month: i,
+        monthDisplay: `M${i}`,
         percentage: vestingData.tgePercentage,
         amount: 0
       });
@@ -243,11 +245,15 @@ const ProjectCreate = () => {
       const percentage = (releasedAmount / totalTokens) * 100;
       
       schedule.push({
-        month,
+        month: month,
+        monthDisplay: `M${month}`,
         percentage: parseFloat(percentage.toFixed(2)),
         amount: parseFloat(releasedAmount.toFixed(2))
       });
     }
+    
+    // Ayları sayısal olarak sırala
+    schedule.sort((a, b) => a.month - b.month);
     
     return schedule;
   };
@@ -445,7 +451,7 @@ const ProjectCreate = () => {
                                   <TableBody>
                                     {calculateVestingSchedule(category).map((row) => (
                                       <TableRow key={row.month}>
-                                        <TableCell>M{row.month}</TableCell>
+                                        <TableCell>{row.monthDisplay}</TableCell>
                                         <TableCell align="right">{row.percentage}%</TableCell>
                                         <TableCell align="right">{row.amount.toLocaleString()}</TableCell>
                                       </TableRow>

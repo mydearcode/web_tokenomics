@@ -21,12 +21,16 @@ import {
   TableCell,
 } from '@mui/material';
 import { getProject, updateProject } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const ProjectEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [project, setProject] = useState(null);
+  const [projectAccess, setProjectAccess] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -44,35 +48,54 @@ const ProjectEdit = () => {
     const fetchProject = async () => {
       try {
         setLoading(true);
-        const project = await getProject(id);
-        console.log('Fetched project:', project);
+        const response = await getProject(id);
+        const projectData = response.data || response;
+        
+        console.log('Fetched project:', projectData);
+        setProject(projectData);
+        
+        // Determine project access level
+        let accessLevel = 'viewer';
+        if (user && projectData.owner && projectData.owner._id === user.id) {
+          accessLevel = 'owner';
+        } else if (projectData.collaborators && projectData.collaborators.some(c => c.user && c.user._id === user?.id && c.role === 'editor')) {
+          accessLevel = 'editor';
+        }
+        setProjectAccess(accessLevel);
+        
+        // If user doesn't have edit access, redirect to details page
+        if (accessLevel !== 'owner' && accessLevel !== 'editor') {
+          console.log('User does not have edit access, redirecting...');
+          navigate(`/projects/${id}`);
+          return;
+        }
         
         // Get allocation categories from project data
-        const categories = Object.keys(project.tokenomics?.allocation || {});
+        const categories = Object.keys(projectData.tokenomics?.allocation || {});
         setAllocationCategories(categories);
         
         // Transform project data to form data
         const transformedData = {
-          name: project.name || '',
-          description: project.description || '',
-          isPublic: project.isPublic || false,
-          tokenName: project.tokenomics?.tokenName || '',
-          tokenSymbol: project.tokenomics?.tokenSymbol || '',
-          totalSupply: project.tokenomics?.totalSupply?.toString() || '',
+          name: projectData.name || '',
+          description: projectData.description || '',
+          isPublic: projectData.isPublic || false,
+          tokenName: projectData.tokenomics?.tokenName || '',
+          tokenSymbol: projectData.tokenomics?.tokenSymbol || '',
+          totalSupply: projectData.tokenomics?.totalSupply?.toString() || '',
           allocation: {},
           vesting: {}
         };
         
         // Process allocation data
-        if (project.tokenomics?.allocation) {
-          Object.entries(project.tokenomics.allocation).forEach(([key, value]) => {
+        if (projectData.tokenomics?.allocation) {
+          Object.entries(projectData.tokenomics.allocation).forEach(([key, value]) => {
             transformedData.allocation[key] = value.percentage || 0;
           });
         }
         
         // Process vesting data
-        if (project.vesting) {
-          Object.entries(project.vesting).forEach(([key, value]) => {
+        if (projectData.vesting) {
+          Object.entries(projectData.vesting).forEach(([key, value]) => {
             transformedData.vesting[key] = {
               tgePercentage: value?.tgePercentage ?? 10,
               cliffMonths: value?.cliffMonths ?? 6,
@@ -92,13 +115,21 @@ const ProjectEdit = () => {
     };
 
     fetchProject();
-  }, [id]);
+  }, [id, user, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleToggleChange = (e) => {
+    const { name, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: checked
     }));
   };
 
@@ -287,6 +318,7 @@ const ProjectEdit = () => {
     // M0 (TGE)
     schedule.push({
       month: 0,
+      monthDisplay: "M0",
       percentage: vestingData.tgePercentage,
       amount: tgeAmount
     });
@@ -296,6 +328,7 @@ const ProjectEdit = () => {
     for (let i = 1; i < vestingData.cliffMonths; i++) {
       schedule.push({
         month: i,
+        monthDisplay: `M${i}`,
         percentage: vestingData.tgePercentage,
         amount: 0
       });
@@ -309,11 +342,15 @@ const ProjectEdit = () => {
       const percentage = (releasedAmount / totalTokens) * 100;
       
       schedule.push({
-        month,
+        month: month,
+        monthDisplay: `M${month}`,
         percentage: parseFloat(percentage.toFixed(2)),
         amount: parseFloat(releasedAmount.toFixed(2))
       });
     }
+    
+    // Ayları sayısal olarak sırala
+    schedule.sort((a, b) => a.month - b.month);
     
     return schedule;
   };
@@ -526,7 +563,7 @@ const ProjectEdit = () => {
                                   <TableBody>
                                     {calculateVestingSchedule(category).map((row) => (
                                       <TableRow key={row.month}>
-                                        <TableCell>M{row.month}</TableCell>
+                                        <TableCell>{row.monthDisplay}</TableCell>
                                         <TableCell align="right">{row.percentage}%</TableCell>
                                         <TableCell align="right">{row.amount.toLocaleString()}</TableCell>
                                       </TableRow>

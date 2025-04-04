@@ -24,10 +24,12 @@ import {
   Delete as DeleteIcon,
   Public as PublicIcon,
   Lock as LockIcon,
+  Share as ShareIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { getProject, deleteProject } from '../services/api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
+import ShareProject from '../components/ShareProject';
 
 // Renk paleti
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C43', '#A4DE6C', '#D0ED57'];
@@ -40,28 +42,47 @@ const ProjectDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedVestingCategory, setSelectedVestingCategory] = useState('');
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [projectAccess, setProjectAccess] = useState('viewer'); // Default access level
+
+  const fetchProject = async () => {
+    setLoading(true);
+    try {
+      const data = await getProject(id);
+      console.log("Project data received:", data);
+      
+      // Verify and format project data if needed
+      const projectData = data?.data || data;
+      
+      setProject(projectData);
+      
+      // Determine project access level
+      if (user && projectData.owner._id === user.id) {
+        setProjectAccess('owner');
+      } else if (projectData.collaborators && projectData.collaborators.some(c => c.user && c.user._id === user?.id && c.role === 'editor')) {
+        setProjectAccess('editor');
+      } else {
+        setProjectAccess('viewer');
+      }
+      
+      // Set the first allocation category as the default selected category
+      if (projectData.tokenomics?.allocation) {
+        const categories = Object.keys(projectData.tokenomics.allocation);
+        if (categories.length > 0) {
+          setSelectedVestingCategory(categories[0]);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching project:", err);
+      setError('Failed to load project');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        const data = await getProject(id);
-        setProject(data);
-        // Set the first allocation category as the default selected category
-        if (data.tokenomics?.allocation) {
-          const categories = Object.keys(data.tokenomics.allocation);
-          if (categories.length > 0) {
-            setSelectedVestingCategory(categories[0]);
-          }
-        }
-      } catch (err) {
-        setError('Failed to load project');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProject();
-  }, [id]);
+  }, [id, user]);
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this project?')) {
@@ -97,6 +118,7 @@ const ProjectDetails = () => {
     // TGE (M0)
     schedule.push({
       month: 0,
+      monthDisplay: "M0",
       percentage: tgePercentage,
       amount: (project.tokenomics.totalSupply * categoryAllocation * tgePercentage) / 10000
     });
@@ -105,6 +127,7 @@ const ProjectDetails = () => {
     for (let i = 1; i < vestingData.cliffMonths; i++) {
       schedule.push({
         month: i,
+        monthDisplay: `M${i}`,
         percentage: tgePercentage,
         amount: (project.tokenomics.totalSupply * categoryAllocation * tgePercentage) / 10000
       });
@@ -117,11 +140,15 @@ const ProjectDetails = () => {
       currentPercentage += monthlyPercentage;
       
       schedule.push({
-        month,
+        month: month,
+        monthDisplay: `M${month}`,
         percentage: Math.min(currentPercentage, 100), // Maksimum 100%'ü geçmemeli
         amount: (project.tokenomics.totalSupply * categoryAllocation * Math.min(currentPercentage, 100)) / 10000
       });
     }
+    
+    // Ayları sayısal olarak sırala
+    schedule.sort((a, b) => a.month - b.month);
     
     return schedule;
   };
@@ -189,6 +216,10 @@ const ProjectDetails = () => {
     }));
   };
 
+  const handleShareProject = () => {
+    setShareDialogOpen(true);
+  };
+
   if (loading) {
     return (
       <Box
@@ -243,8 +274,11 @@ const ProjectDetails = () => {
               </Typography>
             </Box>
           </Box>
-          {isOwner && (
-            <Box sx={{ display: 'flex', gap: 2 }}>
+          
+          {/* Action buttons with role-based access control */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {/* Edit button - only for owner and editor */}
+            {(projectAccess === 'owner' || projectAccess === 'editor') && (
               <Button
                 variant="outlined"
                 startIcon={<EditIcon />}
@@ -254,6 +288,10 @@ const ProjectDetails = () => {
               >
                 Edit
               </Button>
+            )}
+            
+            {/* Delete button - only for owner */}
+            {projectAccess === 'owner' && (
               <Button
                 variant="outlined"
                 color="error"
@@ -262,8 +300,20 @@ const ProjectDetails = () => {
               >
                 Delete
               </Button>
-            </Box>
-          )}
+            )}
+
+            {/* Share button - only for owner */}
+            {projectAccess === 'owner' && (
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<ShareIcon />}
+                onClick={handleShareProject}
+              >
+                Share
+              </Button>
+            )}
+          </Box>
         </Box>
 
         <Typography variant="body1" paragraph>
@@ -440,7 +490,7 @@ const ProjectDetails = () => {
               <TableBody>
                 {calculateVestingSchedule(selectedVestingCategory).map((row) => (
                   <TableRow key={row.month}>
-                    <TableCell>M{row.month}</TableCell>
+                    <TableCell>{row.monthDisplay}</TableCell>
                     <TableCell align="right">{row.percentage}%</TableCell>
                     <TableCell align="right">{row.amount.toLocaleString()}</TableCell>
                   </TableRow>
@@ -452,6 +502,14 @@ const ProjectDetails = () => {
           <Alert severity="info">No vesting schedule available for this category.</Alert>
         )}
       </Paper>
+      {projectAccess === 'owner' && (
+        <ShareProject
+          project={project}
+          open={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
+          onUpdate={fetchProject}
+        />
+      )}
     </Container>
   );
 };
