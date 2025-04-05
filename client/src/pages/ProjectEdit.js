@@ -43,9 +43,12 @@ const ProjectEdit = () => {
     name: '',
     description: '',
     isPublic: false,
-    tokenName: '',
-    tokenSymbol: '',
-    totalSupply: '',
+    tokenomics: {
+      totalSupply: '',
+      initialPrice: '',
+      maxSupply: '',
+      decimals: ''
+    },
     allocation: {},
     vesting: {}
   });
@@ -83,7 +86,7 @@ const ProjectEdit = () => {
         }
         
         // Get allocation categories from project data
-        const categories = Object.keys(projectData.tokenomics?.allocation || {});
+        const categories = Object.keys(projectData.allocation || {});
         setAllocationCategories(categories);
         
         // Transform project data to form data
@@ -91,30 +94,15 @@ const ProjectEdit = () => {
           name: projectData.name || '',
           description: projectData.description || '',
           isPublic: projectData.isPublic || false,
-          tokenName: projectData.tokenomics?.tokenName || '',
-          tokenSymbol: projectData.tokenomics?.tokenSymbol || '',
-          totalSupply: projectData.tokenomics?.totalSupply?.toString() || '',
-          allocation: {},
-          vesting: {}
+          tokenomics: {
+            totalSupply: projectData.tokenomics?.totalSupply?.toString() || '',
+            initialPrice: projectData.tokenomics?.initialPrice?.toString() || '',
+            maxSupply: projectData.tokenomics?.maxSupply?.toString() || '',
+            decimals: projectData.tokenomics?.decimals?.toString() || ''
+          },
+          allocation: projectData.allocation || {},
+          vesting: projectData.vesting || {}
         };
-        
-        // Process allocation data
-        if (projectData.tokenomics?.allocation) {
-          Object.entries(projectData.tokenomics.allocation).forEach(([key, value]) => {
-            transformedData.allocation[key] = value.percentage || 0;
-          });
-        }
-        
-        // Process vesting data
-        if (projectData.vesting) {
-          Object.entries(projectData.vesting).forEach(([key, value]) => {
-            transformedData.vesting[key] = {
-              tgePercentage: value?.tgePercentage ?? 10,
-              cliffMonths: value?.cliffMonths ?? 6,
-              vestingMonths: value?.vestingMonths ?? 12
-            };
-          });
-        }
         
         setFormData(transformedData);
         console.log('Transformed form data:', transformedData);
@@ -244,59 +232,50 @@ const ProjectEdit = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Prevent multiple submissions
-    if (loading) {
-      return;
-    }
-    
+    setError('');
+    setLoading(true);
+
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Validate total allocation
+      // Validate form data
+      if (!formData.name || !formData.description) {
+        throw new Error('Please fill in all required fields');
+      }
+
+      // Validate tokenomics data
+      const tokenomics = formData.tokenomics;
+      if (!tokenomics.totalSupply || !tokenomics.initialPrice || !tokenomics.maxSupply || !tokenomics.decimals) {
+        throw new Error('Please fill in all tokenomics fields');
+      }
+
+      // Validate allocation total
       const totalAllocation = Object.values(formData.allocation).reduce((sum, value) => sum + Number(value), 0);
-      
       if (Math.abs(totalAllocation - 100) > 0.01) {
-        setError(`Total allocation must equal 100%. Current total: ${totalAllocation}%`);
-        setLoading(false);
-        return;
+        throw new Error(`Total allocation must be 100%. Current total: ${totalAllocation}%`);
       }
 
-      // Validate required fields
-      if (!formData.name || !formData.description || !formData.tokenName || !formData.tokenSymbol || !formData.totalSupply) {
-        setError('Please fill in all required fields');
-        setLoading(false);
-        return;
+      // Validate vesting data
+      for (const [category, vesting] of Object.entries(formData.vesting)) {
+        if (!vesting.tgePercentage || !vesting.cliffMonths || !vesting.vestingMonths) {
+          throw new Error(`Please fill in all vesting fields for ${category}`);
+        }
       }
 
-      // Validate total supply
-      const totalSupply = Number(formData.totalSupply);
-      if (isNaN(totalSupply) || totalSupply <= 0) {
-        setError('Total supply must be a positive number');
-        setLoading(false);
-        return;
-      }
-
-      // Prepare project data
       const projectData = {
         name: formData.name,
         description: formData.description,
         isPublic: formData.isPublic,
         tokenomics: {
-          tokenName: formData.tokenName,
-          tokenSymbol: formData.tokenSymbol,
-          totalSupply: Number(formData.totalSupply),
-          allocation: Object.fromEntries(
-            Object.entries(formData.allocation).map(([key, value]) => [
-              key,
-              {
-                percentage: Number(value),
-                amount: (Number(formData.totalSupply) * Number(value)) / 100
-              }
-            ])
-          )
+          totalSupply: Number(formData.tokenomics.totalSupply),
+          initialPrice: Number(formData.tokenomics.initialPrice),
+          maxSupply: Number(formData.tokenomics.maxSupply),
+          decimals: Number(formData.tokenomics.decimals)
         },
+        allocation: Object.fromEntries(
+          Object.entries(formData.allocation).map(([key, value]) => [
+            key,
+            Number(value)
+          ])
+        ),
         vesting: Object.fromEntries(
           Object.entries(formData.vesting).map(([key, value]) => [
             key,
@@ -309,6 +288,7 @@ const ProjectEdit = () => {
         )
       };
       
+      console.log('Submitting project data:', projectData);
       await updateProject(id, projectData);
       
       // Add a small delay before navigating to ensure the project is saved
@@ -316,7 +296,8 @@ const ProjectEdit = () => {
         navigate(`/projects/${id}`);
       }, 500);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update project. Please try again.');
+      console.error('Project update error:', err);
+      setError(err.message || 'Failed to update project. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -326,7 +307,7 @@ const ProjectEdit = () => {
   const calculateVestingSchedule = (category) => {
     const vestingData = formData.vesting[category];
     const allocation = formData.allocation[category];
-    const totalTokens = (Number(formData.totalSupply) * allocation) / 100;
+    const totalTokens = (Number(formData.tokenomics.totalSupply) * allocation) / 100;
     
     // TGE anında açılacak miktar (M0)
     const tgeAmount = (totalTokens * vestingData.tgePercentage) / 100;
@@ -446,9 +427,9 @@ const ProjectEdit = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  name="tokenName"
-                  label="Token Name"
-                  value={formData.tokenName}
+                  name="tokenomics.totalSupply"
+                  label="Total Supply"
+                  value={formData.tokenomics.totalSupply}
                   onChange={handleTokenomicsChange}
                   required
                 />
@@ -456,21 +437,30 @@ const ProjectEdit = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  name="tokenSymbol"
-                  label="Token Symbol"
-                  value={formData.tokenSymbol}
+                  name="tokenomics.initialPrice"
+                  label="Initial Price"
+                  value={formData.tokenomics.initialPrice}
                   onChange={handleTokenomicsChange}
                   required
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  type="number"
-                  name="totalSupply"
-                  label="Total Supply"
-                  value={formData.totalSupply}
-                  onChange={handleInputChange}
+                  name="tokenomics.maxSupply"
+                  label="Max Supply"
+                  value={formData.tokenomics.maxSupply}
+                  onChange={handleTokenomicsChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  name="tokenomics.decimals"
+                  label="Decimals"
+                  value={formData.tokenomics.decimals}
+                  onChange={handleTokenomicsChange}
                   required
                 />
               </Grid>
