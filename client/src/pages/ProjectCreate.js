@@ -39,6 +39,8 @@ const ProjectCreate = () => {
     name: '',
     description: '',
     isPublic: false,
+    tokenName: '',
+    tokenSymbol: '',
     tokenomics: {
       totalSupply: '',
       initialPrice: '',
@@ -148,6 +150,12 @@ const ProjectCreate = () => {
       if (!formData.description?.trim()) {
         throw new Error('Project description is required');
       }
+      if (!formData.tokenName?.trim()) {
+        throw new Error('Token name is required');
+      }
+      if (!formData.tokenSymbol?.trim()) {
+        throw new Error('Token symbol is required');
+      }
 
       // Validate tokenomics data
       const tokenomics = formData.tokenomics;
@@ -187,6 +195,8 @@ const ProjectCreate = () => {
         name: formData.name.trim(),
         description: formData.description.trim(),
         isPublic: formData.isPublic,
+        tokenName: formData.tokenName.trim(),
+        tokenSymbol: formData.tokenSymbol.trim(),
         tokenomics: {
           totalSupply: Number(formData.tokenomics.totalSupply),
           initialPrice: Number(formData.tokenomics.initialPrice),

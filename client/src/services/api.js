@@ -142,7 +142,9 @@ export const createProject = async (projectData) => {
         totalSupply: Number(projectData.tokenomics?.totalSupply),
         initialPrice: Number(projectData.tokenomics?.initialPrice),
         maxSupply: Number(projectData.tokenomics?.maxSupply),
-        decimals: Number(projectData.tokenomics?.decimals)
+        decimals: Number(projectData.tokenomics?.decimals),
+        tokenName: projectData.tokenName?.trim(),
+        tokenSymbol: projectData.tokenSymbol?.trim()
       },
       allocation: {},
       vesting: {}
@@ -173,6 +175,8 @@ export const createProject = async (projectData) => {
     if (!formattedData.tokenomics.initialPrice) throw new Error('Initial price is required');
     if (!formattedData.tokenomics.maxSupply) throw new Error('Max supply is required');
     if (!formattedData.tokenomics.decimals) throw new Error('Decimals is required');
+    if (!formattedData.tokenomics.tokenName) throw new Error('Token name is required');
+    if (!formattedData.tokenomics.tokenSymbol) throw new Error('Token symbol is required');
     if (Object.keys(formattedData.allocation).length === 0) throw new Error('At least one allocation category is required');
     if (Object.keys(formattedData.vesting).length === 0) throw new Error('Vesting information is required');
 
