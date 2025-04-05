@@ -118,20 +118,61 @@ export const changePassword = async (passwordData) => {
 export const createProject = async (projectData) => {
   try {
     console.log('Creating project:', projectData);
-    const response = await api.post('/api/projects', projectData);
+    
+    // Veri yapısını kontrol et ve düzenle
+    const formattedData = {
+      ...projectData,
+      tokenomics: {
+        ...projectData.tokenomics,
+        totalSupply: Number(projectData.tokenomics.totalSupply),
+        initialPrice: Number(projectData.tokenomics.initialPrice),
+        maxSupply: Number(projectData.tokenomics.maxSupply),
+        decimals: Number(projectData.tokenomics.decimals)
+      },
+      allocation: Object.fromEntries(
+        Object.entries(projectData.allocation).map(([key, value]) => [
+          key,
+          Number(value)
+        ])
+      ),
+      vesting: Object.fromEntries(
+        Object.entries(projectData.vesting).map(([key, value]) => [
+          key,
+          {
+            tgePercentage: Number(value.tgePercentage),
+            cliffMonths: Number(value.cliffMonths),
+            vestingMonths: Number(value.vestingMonths)
+          }
+        ])
+      )
+    };
+
+    console.log('Formatted project data:', formattedData);
+    
+    const response = await api.post('/api/projects', formattedData);
     console.log('Create project response:', response.data);
-    
-    // Log the structure of the response
-    console.log('Response structure:', {
-      hasData: 'data' in response.data,
-      hasSuccess: 'success' in response.data,
-      keys: Object.keys(response.data)
-    });
-    
     return response.data;
   } catch (error) {
-    console.error('Create project error:', error.response?.data || error.message);
-    throw error;
+    console.error('Create project error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText
+    });
+    
+    // Daha detaylı hata mesajı oluştur
+    let errorMessage = 'Failed to create project. ';
+    if (error.response?.data?.message) {
+      errorMessage += error.response.data.message;
+    } else if (error.response?.status === 500) {
+      errorMessage += 'Server error. Please try again later.';
+    } else if (error.response?.status === 400) {
+      errorMessage += 'Invalid project data. Please check your inputs.';
+    } else if (!error.response) {
+      errorMessage += 'Network error. Please check your connection.';
+    }
+    
+    throw new Error(errorMessage);
   }
 };
 

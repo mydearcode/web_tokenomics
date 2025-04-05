@@ -134,59 +134,50 @@ const ProjectCreate = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Prevent multiple submissions
-    if (loading) {
-      return;
-    }
-    
+    setError('');
+    setLoading(true);
+
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Validate total allocation
+      // Form verilerini kontrol et
+      if (!formData.name || !formData.description) {
+        throw new Error('Please fill in all required fields');
+      }
+
+      // Tokenomics verilerini kontrol et
+      const tokenomics = formData.tokenomics;
+      if (!tokenomics.totalSupply || !tokenomics.initialPrice || !tokenomics.maxSupply || !tokenomics.decimals) {
+        throw new Error('Please fill in all tokenomics fields');
+      }
+
+      // Allocation toplamını kontrol et
       const totalAllocation = Object.values(formData.allocation).reduce((sum, value) => sum + Number(value), 0);
-      
       if (Math.abs(totalAllocation - 100) > 0.01) {
-        setError(`Total allocation must equal 100%. Current total: ${totalAllocation}%`);
-        setLoading(false);
-        return;
+        throw new Error(`Total allocation must be 100%. Current total: ${totalAllocation}%`);
       }
 
-      // Validate required fields
-      if (!formData.name || !formData.description || !formData.tokenName || !formData.tokenSymbol || !formData.totalSupply) {
-        setError('Please fill in all required fields');
-        setLoading(false);
-        return;
+      // Vesting verilerini kontrol et
+      for (const [category, vesting] of Object.entries(formData.vesting)) {
+        if (!vesting.tgePercentage || !vesting.cliffMonths || !vesting.vestingMonths) {
+          throw new Error(`Please fill in all vesting fields for ${category}`);
+        }
       }
 
-      // Validate total supply
-      const totalSupply = Number(formData.totalSupply);
-      if (isNaN(totalSupply) || totalSupply <= 0) {
-        setError('Total supply must be a positive number');
-        setLoading(false);
-        return;
-      }
-
-      // Prepare project data
       const projectData = {
         name: formData.name,
         description: formData.description,
         isPublic: formData.isPublic,
         tokenomics: {
-          tokenName: formData.tokenName,
-          tokenSymbol: formData.tokenSymbol,
-          totalSupply: Number(formData.totalSupply),
-          allocation: Object.fromEntries(
-            Object.entries(formData.allocation).map(([key, value]) => [
-              key,
-              {
-                percentage: Number(value),
-                amount: (Number(formData.totalSupply) * Number(value)) / 100
-              }
-            ])
-          )
+          totalSupply: Number(formData.tokenomics.totalSupply),
+          initialPrice: Number(formData.tokenomics.initialPrice),
+          maxSupply: Number(formData.tokenomics.maxSupply),
+          decimals: Number(formData.tokenomics.decimals)
         },
+        allocation: Object.fromEntries(
+          Object.entries(formData.allocation).map(([key, value]) => [
+            key,
+            Number(value)
+          ])
+        ),
         vesting: Object.fromEntries(
           Object.entries(formData.vesting).map(([key, value]) => [
             key,
@@ -199,6 +190,7 @@ const ProjectCreate = () => {
         )
       };
       
+      console.log('Submitting project data:', projectData);
       await createProject(projectData);
       
       // Add a small delay before navigating to ensure the project is saved
@@ -206,7 +198,8 @@ const ProjectCreate = () => {
         navigate('/');
       }, 500);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create project. Please try again.');
+      console.error('Project creation error:', err);
+      setError(err.message || 'Failed to create project. Please try again.');
     } finally {
       setLoading(false);
     }
