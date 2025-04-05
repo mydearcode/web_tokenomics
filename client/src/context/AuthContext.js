@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError('');
       
-      console.log('Attempting login with:', { email, password });
+      console.log('Attempting login with:', { email });
       
       const response = await apiLogin({ email, password });
       console.log('Login response:', response);

@@ -89,7 +89,7 @@ export const register = async (userData) => {
 
 export const login = async (credentials) => {
   try {
-    console.log('Logging in user:', { credentials });
+    console.log('Logging in user:', { email: credentials.email });
     const response = await api.post('/api/auth/login', {
       email: credentials.email,
       password: credentials.password
