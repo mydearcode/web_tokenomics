@@ -14,5 +14,8 @@
       "src": "/(.*)",
       "dest": "client/$1"
     }
-  ]
+  ],
+  "env": {
+    "REACT_APP_API_URL": "RENDER_API_URL_WILL_BE_HERE"
+  }
 } 
