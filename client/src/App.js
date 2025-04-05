@@ -1,9 +1,11 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import theme from './theme';
+import { useAuth } from './context/AuthContext';
+import { checkProjectAccess } from './services/api';
 
 // Layout components
 import Navbar from './components/layout/Navbar';
@@ -25,6 +27,67 @@ const ProtectedRoute = ({ children }) => {
   if (!token) {
     return <Navigate to="/login" />;
   }
+  return children;
+};
+
+// Editor Route component - only allows owner or editor roles to access
+const EditorRoute = ({ children }) => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const token = localStorage.getItem('token');
+  const projectId = location.pathname.split('/')[2]; // Extract project ID from URL
+  const [hasAccess, setHasAccess] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!token || !user) {
+        setHasAccess(false);
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        console.log('EditorRoute: Starting access check for project:', projectId);
+        console.log('EditorRoute: Current user:', user);
+        
+        // Use the dedicated API method for access checking
+        const accessData = await checkProjectAccess(projectId);
+        
+        console.log('EditorRoute: Access check response:', accessData);
+        
+        // Check if user can edit based on the API response
+        const canEdit = accessData.access && accessData.access.canEdit;
+        
+        console.log('EditorRoute: Can user edit?', canEdit);
+        
+        setHasAccess(canEdit);
+      } catch (error) {
+        console.error('EditorRoute: Error checking project access:', error);
+        setHasAccess(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkAccess();
+  }, [projectId, token, user]);
+  
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (loading) {
+    return <CircularProgress sx={{ margin: '20% auto', display: 'block' }} />;
+  }
+  
+  // Redirect to project details if the user doesn't have edit permission
+  if (!hasAccess) {
+    console.log('EditorRoute: Access denied - redirecting to project details page');
+    return <Navigate to={`/projects/${projectId}`} />;
+  }
+  
+  console.log('EditorRoute: Access granted - rendering editor page');
   return children;
 };
 
@@ -71,9 +134,9 @@ function App() {
             <Route
               path="/projects/:id/edit"
               element={
-                <ProtectedRoute>
+                <EditorRoute>
                   <ProjectEdit />
-                </ProtectedRoute>
+                </EditorRoute>
               }
             />
             <Route

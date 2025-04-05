@@ -18,6 +18,31 @@ router.get('/', protect, authorize('admin'), async (req, res) => {
   }
 });
 
+// User search by email
+router.get('/search', protect, async (req, res) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email query parameter is required' });
+    }
+    
+    // Find user with the exact email
+    const user = await User.findOne({ email }).select('_id name email');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found with that email' });
+    }
+    
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get a single user
 router.get('/:id', protect, async (req, res) => {
   try {

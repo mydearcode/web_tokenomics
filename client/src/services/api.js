@@ -226,4 +226,130 @@ export const deleteProject = async (id) => {
   }
 };
 
+// Add a collaborator to a project by email
+export const addProjectCollaborator = async (projectId, email, role) => {
+  try {
+    console.log('API: Adding collaborator:', { projectId, email, role });
+    const response = await api.post(`/projects/${projectId}/collaborators`, { email, role });
+    console.log('API: Add collaborator response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('API: Add collaborator error:', error);
+    
+    // Detailed error information
+    const errorDetails = {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      responseData: error.response?.data,
+      // Extract important response information if available
+      responseError: error.response?.data?.error,
+      responseMessage: error.response?.data?.message,
+      stack: error.stack
+    };
+    
+    console.error('API: Error details:', errorDetails);
+    
+    // Normalize the error object to provide consistent interface
+    let errorMessage = 'Kullanıcı eklenirken bir hata oluştu.';
+    
+    if (error.response) {
+      if (error.response.status === 404) {
+        errorMessage = 'Kullanıcı bu e-posta ile bulunamadı.';
+      } else if (error.response.status === 400) {
+        errorMessage = error.response.data?.message || 'Geçersiz istek. Bu kullanıcı zaten eklenmiş olabilir.';
+      } else if (error.response.status === 403) {
+        errorMessage = 'Bu işlem için yetkiniz bulunmuyor.';
+      } else if (error.response.status === 500) {
+        errorMessage = `Sunucu hatası: ${error.response.data?.message || 'Bilinmeyen hata'}`;
+      }
+    } else if (error.request) {
+      errorMessage = 'Sunucu yanıt vermiyor. İnternet bağlantınızı kontrol edin.';
+    }
+    
+    throw { 
+      message: errorMessage,
+      details: errorDetails 
+    };
+  }
+};
+
+// Remove a collaborator from a project
+export const removeProjectCollaborator = async (projectId, userId) => {
+  try {
+    console.log('API: Removing collaborator:', { projectId, userId });
+    const response = await api.delete(`/projects/${projectId}/collaborators/${userId}`);
+    console.log('API: Remove collaborator response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('API: Remove collaborator error:', error);
+    
+    // Detailed error information
+    const errorDetails = {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      responseData: error.response?.data,
+      // Extract important response information if available
+      responseError: error.response?.data?.error,
+      responseMessage: error.response?.data?.message,
+      stack: error.stack
+    };
+    
+    console.error('API: Error details:', errorDetails);
+    
+    // Normalize the error object to provide consistent interface
+    let errorMessage = 'Kullanıcı kaldırılırken bir hata oluştu.';
+    
+    if (error.response) {
+      if (error.response.status === 404) {
+        errorMessage = 'Kullanıcı veya proje bulunamadı.';
+      } else if (error.response.status === 400) {
+        errorMessage = error.response.data?.message || 'Geçersiz istek.';
+      } else if (error.response.status === 403) {
+        errorMessage = 'Bu işlem için yetkiniz bulunmuyor.';
+      } else if (error.response.status === 500) {
+        errorMessage = `Sunucu hatası: ${error.response.data?.message || 'Bilinmeyen hata'}`;
+      }
+    } else if (error.request) {
+      errorMessage = 'Sunucu yanıt vermiyor. İnternet bağlantınızı kontrol edin.';
+    }
+    
+    throw { 
+      message: errorMessage,
+      details: errorDetails 
+    };
+  }
+};
+
+// Search for users by email
+export const searchUsersByEmail = async (email) => {
+  try {
+    const response = await api.get(`/users/search?email=${email}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+// Check user access to a project (debug function)
+export const checkProjectAccess = async (projectId) => {
+  try {
+    console.log('API: Checking access for project:', projectId);
+    const response = await api.get(`/projects/${projectId}/check-access`);
+    console.log('API: Access check response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('API: Access check error:', error);
+    throw {
+      message: 'Failed to check project access',
+      details: {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      }
+    };
+  }
+};
+
 export default api; 

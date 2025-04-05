@@ -119,6 +119,35 @@ const ProjectSchema = new mongoose.Schema({
 // Update the updatedAt field before saving
 ProjectSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
+  
+  // Ensure owner is a valid ObjectId
+  if (this.owner && typeof this.owner === 'string') {
+    try {
+      this.owner = new mongoose.Types.ObjectId(this.owner);
+    } catch (err) {
+      // Continue anyway, Mongoose will handle validation errors
+    }
+  }
+  
+  // Ensure each collaborator.user is a valid ObjectId
+  if (this.collaborators && this.collaborators.length > 0) {
+    this.collaborators = this.collaborators.filter(collab => {
+      // Remove any collaborator entries with null/undefined user
+      if (!collab || !collab.user) return false;
+      
+      // Try to convert string IDs to ObjectId
+      if (typeof collab.user === 'string') {
+        try {
+          collab.user = new mongoose.Types.ObjectId(collab.user);
+        } catch (err) {
+          return false; // Remove this collaborator if ID is invalid
+        }
+      }
+      
+      return true;
+    });
+  }
+  
   next();
 });
 

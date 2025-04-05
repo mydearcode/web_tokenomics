@@ -19,11 +19,13 @@ import {
   Visibility as ViewIcon
 } from '@mui/icons-material';
 import { getProjects, deleteProject } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { user } = useAuth();
 
   const handleDelete = async (projectId) => {
     if (window.confirm('Are you sure you want to delete this project?')) {
@@ -34,6 +36,34 @@ const Dashboard = () => {
         setError(err.response?.data?.message || 'Failed to delete project');
       }
     }
+  };
+
+  // Helper function to determine project access level
+  const getProjectAccess = (project) => {
+    if (!user || !project) return 'viewer';
+    
+    // Check if user is the owner
+    const isOwner = project.owner && (
+      (typeof project.owner === 'string' && project.owner === user.id) ||
+      (project.owner._id && project.owner._id === user.id)
+    );
+    
+    if (isOwner) return 'owner';
+    
+    // Check if user is an editor
+    const isEditor = project.collaborators && project.collaborators.some(c => {
+      if (!c || !c.user) return false;
+      
+      const collabUserId = typeof c.user === 'object' && c.user._id 
+        ? c.user._id 
+        : c.user;
+        
+      return collabUserId === user.id && c.role === 'editor';
+    });
+    
+    if (isEditor) return 'editor';
+    
+    return 'viewer';
   };
 
   useEffect(() => {
@@ -114,52 +144,63 @@ const Dashboard = () => {
         </Card>
       ) : (
         <Grid container spacing={3}>
-          {projects.map((project) => (
-            <Grid item key={project._id} xs={12} sm={6} md={4}>
-              <Card
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" component="h2" gutterBottom>
-                    {project.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {project.description}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button
-                    component={RouterLink}
-                    to={`/projects/${project._id}`}
-                    size="small"
-                    startIcon={<ViewIcon />}
-                  >
-                    View
-                  </Button>
-                  <Button
-                    component={RouterLink}
-                    to={`/projects/${project._id}/edit`}
-                    size="small"
-                    startIcon={<EditIcon />}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="small"
-                    color="error"
-                    onClick={() => handleDelete(project._id)}
-                    startIcon={<DeleteIcon />}
-                  >
-                    Delete
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
+          {projects.map((project) => {
+            const accessLevel = getProjectAccess(project);
+            return (
+              <Grid item key={project._id} xs={12} sm={6} md={4}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" component="h2" gutterBottom>
+                      {project.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {project.description}
+                    </Typography>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      component={RouterLink}
+                      to={`/projects/${project._id}`}
+                      size="small"
+                      startIcon={<ViewIcon />}
+                    >
+                      View
+                    </Button>
+                    
+                    {/* Edit button - only for owner and editor */}
+                    {(accessLevel === 'owner' || accessLevel === 'editor') && (
+                      <Button
+                        component={RouterLink}
+                        to={`/projects/${project._id}/edit`}
+                        size="small"
+                        startIcon={<EditIcon />}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                    
+                    {/* Delete button - only for owner */}
+                    {accessLevel === 'owner' && (
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => handleDelete(project._id)}
+                        startIcon={<DeleteIcon />}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </CardActions>
+                </Card>
+              </Grid>
+            );
+          })}
         </Grid>
       )}
     </Container>
