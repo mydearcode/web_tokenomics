@@ -51,39 +51,28 @@ api.interceptors.response.use(
   (error) => {
     if (error.response) {
       // Server responded with error
-      console.error('Response error:', {
-        status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers,
-      });
-      
-      // Handle specific error cases
-      if (error.response.status === 403) {
-        console.error('Authorization error: Access forbidden');
-        // Optionally redirect to login or show error message
-      } else if (error.response.status === 401) {
-        console.error('Authentication error: Unauthorized');
-        // Optionally clear token and redirect to login
-        localStorage.removeItem('token');
-      }
+      const message = error.response.data.message || 'An error occurred';
+      return Promise.reject(new Error(message));
     } else if (error.request) {
-      // Request made but no response received
-      console.error('Network error:', error.request);
+      // Request made but no response
+      return Promise.reject(new Error('No response from server'));
     } else {
-      // Error in request configuration
-      console.error('Request configuration error:', error.message);
+      // Request setup error
+      return Promise.reject(new Error('Error setting up request'));
     }
-    
-    return Promise.reject(error);
   }
 );
 
 // Auth endpoints
-export const register = async (name, email, password) => {
+export const register = async (userData) => {
   try {
-    console.log('Registering user:', { name, email });
-    const response = await api.post('/api/auth/register', { name, email, password });
+    console.log('Registering user:', { userData });
+    const response = await api.post('/api/auth/register', userData);
     console.log('Register response:', response.data);
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
     return response.data;
   } catch (error) {
     console.error('Register error:', error.response?.data || error.message);
@@ -91,11 +80,15 @@ export const register = async (name, email, password) => {
   }
 };
 
-export const login = async (email, password) => {
+export const login = async (credentials) => {
   try {
-    console.log('Logging in user:', { email });
-    const response = await api.post('/api/auth/login', { email, password });
+    console.log('Logging in user:', { credentials });
+    const response = await api.post('/api/auth/login', credentials);
     console.log('Login response:', response.data);
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
     return response.data;
   } catch (error) {
     console.error('Login error:', error.response?.data || error.message);
@@ -103,9 +96,13 @@ export const login = async (email, password) => {
   }
 };
 
-export const updateProfile = async (name, email) => {
+export const updateProfile = async (userData) => {
   try {
-    const response = await api.put('/api/auth/profile', { name, email });
+    const response = await api.put('/api/auth/profile', userData);
+    console.log('Update profile response:', response.data);
+    if (response.data.user) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
     return response.data;
   } catch (error) {
     console.error('Update profile error:', error.response?.data || error.message);
@@ -113,9 +110,9 @@ export const updateProfile = async (name, email) => {
   }
 };
 
-export const changePassword = async (currentPassword, newPassword) => {
+export const changePassword = async (passwordData) => {
   try {
-    const response = await api.put('/api/auth/password', { currentPassword, newPassword });
+    const response = await api.put('/api/auth/password', passwordData);
     return response.data;
   } catch (error) {
     console.error('Change password error:', error.response?.data || error.message);
@@ -209,7 +206,7 @@ export const getProject = async (id) => {
 
 export const updateProject = async (id, projectData) => {
   try {
-    const response = await api.put(`/projects/${id}`, projectData);
+    const response = await api.put(`/api/projects/${id}`, projectData);
     return response.data;
   } catch (error) {
     console.error('Update project error:', error.response?.data || error.message);
@@ -219,7 +216,7 @@ export const updateProject = async (id, projectData) => {
 
 export const deleteProject = async (id) => {
   try {
-    const response = await api.delete(`/projects/${id}`);
+    const response = await api.delete(`/api/projects/${id}`);
     return response.data;
   } catch (error) {
     console.error('Delete project error:', error.response?.data || error.message);

@@ -29,7 +29,21 @@ router.post('/register', async (req, res) => {
     
     await user.save();
     
-    res.status(201).json({ message: 'User created successfully' });
+    // Create token for automatic login
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+    
+    res.status(201).json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ message: 'Server error' });
