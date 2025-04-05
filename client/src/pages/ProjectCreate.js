@@ -138,24 +138,24 @@ const ProjectCreate = () => {
     setLoading(true);
 
     try {
-      // Form verilerini kontrol et
+      // Validate form data
       if (!formData.name || !formData.description) {
         throw new Error('Please fill in all required fields');
       }
 
-      // Tokenomics verilerini kontrol et
+      // Validate tokenomics data
       const tokenomics = formData.tokenomics;
       if (!tokenomics.totalSupply || !tokenomics.initialPrice || !tokenomics.maxSupply || !tokenomics.decimals) {
         throw new Error('Please fill in all tokenomics fields');
       }
 
-      // Allocation toplamını kontrol et
+      // Validate allocation total
       const totalAllocation = Object.values(formData.allocation).reduce((sum, value) => sum + Number(value), 0);
       if (Math.abs(totalAllocation - 100) > 0.01) {
         throw new Error(`Total allocation must be 100%. Current total: ${totalAllocation}%`);
       }
 
-      // Vesting verilerini kontrol et
+      // Validate vesting data
       for (const [category, vesting] of Object.entries(formData.vesting)) {
         if (!vesting.tgePercentage || !vesting.cliffMonths || !vesting.vestingMonths) {
           throw new Error(`Please fill in all vesting fields for ${category}`);

@@ -119,7 +119,7 @@ export const createProject = async (projectData) => {
   try {
     console.log('Creating project:', projectData);
     
-    // Veri yapısını kontrol et ve düzenle
+    // Format and validate data structure
     const formattedData = {
       ...projectData,
       tokenomics: {
@@ -153,14 +153,21 @@ export const createProject = async (projectData) => {
     console.log('Create project response:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Create project error:', {
+    // Log detailed error information
+    console.error('Create project error details:', {
       message: error.message,
       response: error.response?.data,
       status: error.response?.status,
-      statusText: error.response?.statusText
+      statusText: error.response?.statusText,
+      headers: error.response?.headers,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        data: error.config?.data
+      }
     });
     
-    // Daha detaylı hata mesajı oluştur
+    // Create a more detailed error message
     let errorMessage = 'Failed to create project. ';
     if (error.response?.data?.message) {
       errorMessage += error.response.data.message;
