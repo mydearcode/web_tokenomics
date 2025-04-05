@@ -25,7 +25,7 @@ api.interceptors.request.use(
     }
     
     // Log request details
-    console.log('Request:', {
+    console.log('Request interceptor:', {
       url: config.url,
       method: config.method,
       headers: config.headers,
@@ -35,7 +35,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('Request error:', error);
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -90,11 +90,18 @@ export const register = async (userData) => {
 export const login = async (email, password) => {
   try {
     console.log('Logging in user:', { email });
-    const response = await api.post('/api/auth/login', {
-      email: email,
+    
+    // Ensure email and password are properly formatted
+    const loginData = {
+      email: email.trim(),
       password: password
-    });
+    };
+    
+    console.log('Login request data:', { email: loginData.email });
+    
+    const response = await api.post('/api/auth/login', loginData);
     console.log('Login response:', response.data);
+    
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -197,10 +204,23 @@ export const createProject = async (projectData) => {
     // Log the formatted data
     console.log('Formatted project data:', JSON.stringify(formattedData, null, 2));
     
-    // Set authorization header
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    // Set authorization header for this specific request
+    const config = {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    };
     
-    const response = await api.post('/api/projects', formattedData);
+    // Log the request configuration
+    console.log('Request config:', {
+      url: '/api/projects',
+      method: 'POST',
+      headers: config.headers,
+      data: formattedData
+    });
+    
+    const response = await api.post('/api/projects', formattedData, config);
     console.log('Create project response:', response.data);
     return response.data;
   } catch (error) {
