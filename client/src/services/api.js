@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API URL configuration for development and production
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+const API_URL = process.env.REACT_APP_API_URL || 'https://tokenomics-api-ghc0.onrender.com';
 
 console.log('API URL:', API_URL);
 
@@ -46,12 +46,19 @@ api.interceptors.response.use(
     if (error.response) {
       // Server responded with error
       const message = error.response.data.message || 'An error occurred';
+      console.error('API Error:', {
+        status: error.response.status,
+        message: message,
+        data: error.response.data
+      });
       return Promise.reject(new Error(message));
     } else if (error.request) {
       // Request made but no response
+      console.error('No response from server:', error.request);
       return Promise.reject(new Error('No response from server'));
     } else {
       // Request setup error
+      console.error('Request setup error:', error.message);
       return Promise.reject(new Error('Error setting up request'));
     }
   }
@@ -61,7 +68,11 @@ api.interceptors.response.use(
 export const register = async (userData) => {
   try {
     console.log('Registering user:', { userData });
-    const response = await api.post('/api/auth/register', userData);
+    const response = await api.post('/api/auth/register', {
+      name: userData.name,
+      email: userData.email,
+      password: userData.password
+    });
     console.log('Register response:', response.data);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
@@ -70,14 +81,17 @@ export const register = async (userData) => {
     return response.data;
   } catch (error) {
     console.error('Register error:', error.response?.data || error.message);
-    throw error;
+    throw new Error(error.response?.data?.message || 'Registration failed');
   }
 };
 
 export const login = async (credentials) => {
   try {
     console.log('Logging in user:', { credentials });
-    const response = await api.post('/api/auth/login', credentials);
+    const response = await api.post('/api/auth/login', {
+      email: credentials.email,
+      password: credentials.password
+    });
     console.log('Login response:', response.data);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
@@ -86,7 +100,7 @@ export const login = async (credentials) => {
     return response.data;
   } catch (error) {
     console.error('Login error:', error.response?.data || error.message);
-    throw error;
+    throw new Error(error.response?.data?.message || 'Login failed');
   }
 };
 
@@ -121,22 +135,23 @@ export const createProject = async (projectData) => {
     
     // Format and validate data structure
     const formattedData = {
-      ...projectData,
+      name: projectData.name,
+      description: projectData.description,
+      isPublic: projectData.isPublic,
       tokenomics: {
-        ...projectData.tokenomics,
         totalSupply: Number(projectData.tokenomics.totalSupply),
         initialPrice: Number(projectData.tokenomics.initialPrice),
         maxSupply: Number(projectData.tokenomics.maxSupply),
         decimals: Number(projectData.tokenomics.decimals)
       },
       allocation: Object.fromEntries(
-        Object.entries(projectData.allocation).map(([key, value]) => [
+        Object.entries(projectData.allocation || {}).map(([key, value]) => [
           key,
           Number(value)
         ])
       ),
       vesting: Object.fromEntries(
-        Object.entries(projectData.vesting).map(([key, value]) => [
+        Object.entries(projectData.vesting || {}).map(([key, value]) => [
           key,
           {
             tgePercentage: Number(value.tgePercentage),
