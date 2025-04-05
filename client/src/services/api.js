@@ -22,6 +22,16 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Token added to request:', {
+        url: config.url,
+        method: config.method,
+        token: token.substring(0, 10) + '...'
+      });
+    } else {
+      console.warn('No token found for request:', {
+        url: config.url,
+        method: config.method
+      });
     }
     
     // Log request details
@@ -97,19 +107,40 @@ export const login = async (email, password) => {
       password: password
     };
     
-    console.log('Login request data:', { email: loginData.email });
+    console.log('Login request data:', loginData);
     
-    const response = await api.post('/api/auth/login', loginData);
+    // Set headers explicitly for this request
+    const config = {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+    
+    // Clear any existing token
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    delete api.defaults.headers.common['Authorization'];
+    
+    const response = await api.post('/api/auth/login', loginData, config);
     console.log('Login response:', response.data);
     
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+      console.log('Token stored and headers updated:', {
+        token: response.data.token.substring(0, 10) + '...',
+        user: response.data.user
+      });
     }
     return response.data;
   } catch (error) {
-    console.error('Login error:', error.response?.data || error.message);
+    console.error('Login error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText
+    });
     throw new Error(error.response?.data?.message || 'Login failed');
   }
 };
@@ -220,7 +251,8 @@ export const createProject = async (projectData) => {
       data: formattedData
     });
     
-    const response = await api.post('/api/projects', formattedData, config);
+    // Make the request with explicit headers
+    const response = await axios.post(`${API_URL}/api/projects`, formattedData, config);
     console.log('Create project response:', response.data);
     return response.data;
   } catch (error) {
