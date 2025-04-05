@@ -109,25 +109,28 @@ export const login = async (email, password) => {
     
     console.log('Login request data:', loginData);
     
-    // Set headers explicitly for this request
-    const config = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-    
-    // Clear any existing token
+    // Clear any existing token and user data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     delete api.defaults.headers.common['Authorization'];
     
-    const response = await api.post('/api/auth/login', loginData, config);
+    // Make the request directly with axios to avoid interceptor issues
+    const response = await axios.post(`${API_URL}/api/auth/login`, loginData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
     console.log('Login response:', response.data);
     
     if (response.data.token) {
+      // Store token and user data
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // Set default authorization header for all future requests
       api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+      
       console.log('Token stored and headers updated:', {
         token: response.data.token.substring(0, 10) + '...',
         user: response.data.user
@@ -141,7 +144,15 @@ export const login = async (email, password) => {
       status: error.response?.status,
       statusText: error.response?.statusText
     });
-    throw new Error(error.response?.data?.message || 'Login failed');
+    
+    // Return a more specific error message
+    if (error.response?.status === 400) {
+      throw new Error('Geçersiz e-posta veya şifre');
+    } else if (error.response?.status === 401) {
+      throw new Error('Kimlik doğrulama başarısız');
+    } else {
+      throw new Error(error.response?.data?.message || 'Giriş başarısız oldu');
+    }
   }
 };
 
@@ -180,7 +191,7 @@ export const createProject = async (projectData) => {
     
     if (!user || !user._id || !token) {
       console.error('Authentication error:', { user, token });
-      throw new Error('User not authenticated');
+      throw new Error('Kullanıcı kimliği doğrulanmadı. Lütfen tekrar giriş yapın.');
     }
     
     // Format and validate data structure
@@ -189,13 +200,13 @@ export const createProject = async (projectData) => {
       description: projectData.description?.trim(),
       isPublic: Boolean(projectData.isPublic),
       owner: user._id,
+      tokenName: projectData.tokenName?.trim(),
+      tokenSymbol: projectData.tokenSymbol?.trim(),
       tokenomics: {
         totalSupply: Number(projectData.tokenomics?.totalSupply),
         initialPrice: Number(projectData.tokenomics?.initialPrice),
         maxSupply: Number(projectData.tokenomics?.maxSupply),
-        decimals: Number(projectData.tokenomics?.decimals),
-        tokenName: projectData.tokenName?.trim(),
-        tokenSymbol: projectData.tokenSymbol?.trim()
+        decimals: Number(projectData.tokenomics?.decimals)
       },
       allocation: {},
       vesting: {}
@@ -220,39 +231,23 @@ export const createProject = async (projectData) => {
     }
 
     // Validate required fields
-    if (!formattedData.name) throw new Error('Project name is required');
-    if (!formattedData.description) throw new Error('Project description is required');
-    if (!formattedData.owner) throw new Error('Owner is required');
-    if (!formattedData.tokenomics.totalSupply) throw new Error('Total supply is required');
-    if (!formattedData.tokenomics.initialPrice) throw new Error('Initial price is required');
-    if (!formattedData.tokenomics.maxSupply) throw new Error('Max supply is required');
-    if (!formattedData.tokenomics.decimals) throw new Error('Decimals is required');
-    if (!formattedData.tokenomics.tokenName) throw new Error('Token name is required');
-    if (!formattedData.tokenomics.tokenSymbol) throw new Error('Token symbol is required');
-    if (Object.keys(formattedData.allocation).length === 0) throw new Error('At least one allocation category is required');
-    if (Object.keys(formattedData.vesting).length === 0) throw new Error('Vesting information is required');
+    if (!formattedData.name) throw new Error('Proje adı gereklidir');
+    if (!formattedData.description) throw new Error('Proje açıklaması gereklidir');
+    if (!formattedData.owner) throw new Error('Proje sahibi gereklidir');
+    if (!formattedData.tokenName) throw new Error('Token adı gereklidir');
+    if (!formattedData.tokenSymbol) throw new Error('Token sembolü gereklidir');
+    if (!formattedData.tokenomics.totalSupply) throw new Error('Toplam arz gereklidir');
+    if (!formattedData.tokenomics.initialPrice) throw new Error('Başlangıç fiyatı gereklidir');
+    if (!formattedData.tokenomics.maxSupply) throw new Error('Maksimum arz gereklidir');
+    if (!formattedData.tokenomics.decimals) throw new Error('Ondalık basamak sayısı gereklidir');
+    if (Object.keys(formattedData.allocation).length === 0) throw new Error('En az bir dağıtım kategorisi gereklidir');
+    if (Object.keys(formattedData.vesting).length === 0) throw new Error('Vesting bilgisi gereklidir');
 
     // Log the formatted data
     console.log('Formatted project data:', JSON.stringify(formattedData, null, 2));
     
-    // Set authorization header for this specific request
-    const config = {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    };
-    
-    // Log the request configuration
-    console.log('Request config:', {
-      url: '/api/projects',
-      method: 'POST',
-      headers: config.headers,
-      data: formattedData
-    });
-    
-    // Make the request with explicit headers
-    const response = await axios.post(`${API_URL}/api/projects`, formattedData, config);
+    // Use the api instance which already has the token in its headers
+    const response = await api.post('/api/projects', formattedData);
     console.log('Create project response:', response.data);
     return response.data;
   } catch (error) {
@@ -264,17 +259,19 @@ export const createProject = async (projectData) => {
     });
     
     if (error.response) {
-      if (error.response.status === 500) {
-        throw new Error('Server error. Please try again later.');
+      if (error.response.status === 401) {
+        throw new Error('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
+      } else if (error.response.status === 500) {
+        throw new Error('Sunucu hatası. Lütfen daha sonra tekrar deneyin.');
       } else if (error.response.status === 400) {
-        throw new Error(error.response.data?.message || 'Invalid project data');
+        throw new Error(error.response.data?.message || 'Geçersiz proje verisi');
       } else {
-        throw new Error(error.response.data?.message || 'Failed to create project');
+        throw new Error(error.response.data?.message || 'Proje oluşturulamadı');
       }
     } else if (error.request) {
-      throw new Error('Network error. Please check your connection.');
+      throw new Error('Ağ hatası. Lütfen bağlantınızı kontrol edin.');
     } else {
-      throw new Error(error.message || 'Failed to create project');
+      throw new Error(error.message || 'Proje oluşturulamadı');
     }
   }
 };

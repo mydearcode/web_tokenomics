@@ -47,7 +47,14 @@ const Login = () => {
         navigate('/dashboard');
       } catch (err) {
         console.error('Login error:', err);
-        setError(err.message || 'Giriş başarısız oldu');
+        // Display a more user-friendly error message
+        if (err.message.includes('Geçersiz e-posta veya şifre')) {
+          setError('E-posta adresi veya şifre hatalı. Lütfen tekrar deneyin.');
+        } else if (err.message.includes('Kimlik doğrulama başarısız')) {
+          setError('Kimlik doğrulama başarısız. Lütfen tekrar giriş yapın.');
+        } else {
+          setError(err.message || 'Giriş başarısız oldu. Lütfen tekrar deneyin.');
+        }
       } finally {
         setLoading(false);
         setSubmitting(false);
