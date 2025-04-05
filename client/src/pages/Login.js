@@ -21,14 +21,19 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (values, { setSubmitting }) => {
     try {
       setError('');
+      setLoading(true);
+      console.log('Submitting login form with values:', { email: values.email });
       await login(values.email, values.password);
       navigate('/');
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+      setSubmitting(false);
     }
   };
 

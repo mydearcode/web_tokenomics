@@ -87,12 +87,12 @@ export const register = async (userData) => {
   }
 };
 
-export const login = async (credentials) => {
+export const login = async (email, password) => {
   try {
-    console.log('Logging in user:', { email: credentials.email });
+    console.log('Logging in user:', { email });
     const response = await api.post('/api/auth/login', {
-      email: credentials.email,
-      password: credentials.password
+      email: email,
+      password: password
     });
     console.log('Login response:', response.data);
     if (response.data.token) {
@@ -429,4 +429,4 @@ export const checkProjectAccess = async (projectId) => {
   }
 };
 
-export default api; 
+export default api;
