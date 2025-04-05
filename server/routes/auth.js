@@ -54,16 +54,21 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for email:', email);
     
     // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('User not found for email:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+    console.log('User found:', { id: user._id, email: user.email });
     
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match result:', isMatch);
     if (!isMatch) {
+      console.log('Password mismatch for user:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
     
@@ -74,6 +79,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '1d' }
     );
     
+    console.log('Login successful for user:', email);
     res.json({
       token,
       user: {
