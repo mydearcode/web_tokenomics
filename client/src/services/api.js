@@ -18,6 +18,7 @@ const api = axios.create({
 // Add request interceptor for logging and token management
 api.interceptors.request.use(
   (config) => {
+    // Get token from localStorage
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -77,6 +78,7 @@ export const register = async (userData) => {
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
     }
     return response.data;
   } catch (error) {
@@ -96,6 +98,7 @@ export const login = async (credentials) => {
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
     }
     return response.data;
   } catch (error) {
