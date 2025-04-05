@@ -142,14 +142,26 @@ const ProjectCreate = () => {
 
     try {
       // Validate form data
-      if (!formData.name || !formData.description) {
-        throw new Error('Please fill in all required fields');
+      if (!formData.name?.trim()) {
+        throw new Error('Project name is required');
+      }
+      if (!formData.description?.trim()) {
+        throw new Error('Project description is required');
       }
 
       // Validate tokenomics data
       const tokenomics = formData.tokenomics;
-      if (!tokenomics.totalSupply || !tokenomics.initialPrice || !tokenomics.maxSupply || !tokenomics.decimals) {
-        throw new Error('Please fill in all tokenomics fields');
+      if (!tokenomics.totalSupply || isNaN(Number(tokenomics.totalSupply))) {
+        throw new Error('Total supply must be a valid number');
+      }
+      if (!tokenomics.initialPrice || isNaN(Number(tokenomics.initialPrice))) {
+        throw new Error('Initial price must be a valid number');
+      }
+      if (!tokenomics.maxSupply || isNaN(Number(tokenomics.maxSupply))) {
+        throw new Error('Max supply must be a valid number');
+      }
+      if (!tokenomics.decimals || isNaN(Number(tokenomics.decimals))) {
+        throw new Error('Decimals must be a valid number');
       }
 
       // Validate allocation total
@@ -160,8 +172,14 @@ const ProjectCreate = () => {
 
       // Validate vesting data
       for (const [category, vesting] of Object.entries(formData.vesting)) {
-        if (!vesting.tgePercentage || !vesting.cliffMonths || !vesting.vestingMonths) {
-          throw new Error(`Please fill in all vesting fields for ${category}`);
+        if (!vesting.tgePercentage || isNaN(Number(vesting.tgePercentage))) {
+          throw new Error(`TGE percentage must be a valid number for ${category}`);
+        }
+        if (!vesting.cliffMonths || isNaN(Number(vesting.cliffMonths))) {
+          throw new Error(`Cliff months must be a valid number for ${category}`);
+        }
+        if (!vesting.vestingMonths || isNaN(Number(vesting.vestingMonths))) {
+          throw new Error(`Vesting months must be a valid number for ${category}`);
         }
       }
 
@@ -195,6 +213,7 @@ const ProjectCreate = () => {
       
       // Log the exact data being sent
       console.log('Submitting project data:', JSON.stringify(projectData, null, 2));
+      
       await createProject(projectData);
       
       // Add a small delay before navigating to ensure the project is saved

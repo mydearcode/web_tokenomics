@@ -131,91 +131,73 @@ export const changePassword = async (passwordData) => {
 // Project endpoints
 export const createProject = async (projectData) => {
   try {
-    console.log('Creating project:', projectData);
+    console.log('Creating project with data:', JSON.stringify(projectData, null, 2));
     
     // Format and validate data structure
     const formattedData = {
-      name: projectData.name,
-      description: projectData.description,
-      isPublic: projectData.isPublic,
+      name: projectData.name?.trim(),
+      description: projectData.description?.trim(),
+      isPublic: Boolean(projectData.isPublic),
       tokenomics: {
-        totalSupply: Number(projectData.tokenomics.totalSupply),
-        initialPrice: Number(projectData.tokenomics.initialPrice),
-        maxSupply: Number(projectData.tokenomics.maxSupply),
-        decimals: Number(projectData.tokenomics.decimals)
+        totalSupply: Number(projectData.tokenomics?.totalSupply),
+        initialPrice: Number(projectData.tokenomics?.initialPrice),
+        maxSupply: Number(projectData.tokenomics?.maxSupply),
+        decimals: Number(projectData.tokenomics?.decimals)
       },
-      allocation: Object.fromEntries(
-        Object.entries(projectData.allocation || {}).map(([key, value]) => [
-          key,
-          Number(value)
-        ])
-      ),
-      vesting: Object.fromEntries(
-        Object.entries(projectData.vesting || {}).map(([key, value]) => [
-          key,
-          {
-            tgePercentage: Number(value.tgePercentage),
-            cliffMonths: Number(value.cliffMonths),
-            vestingMonths: Number(value.vestingMonths)
-          }
-        ])
-      )
+      allocation: {},
+      vesting: {}
     };
 
-    // Validate data before sending
-    if (!formattedData.name || !formattedData.description) {
-      throw new Error('Name and description are required');
+    // Format allocation data
+    if (projectData.allocation) {
+      Object.entries(projectData.allocation).forEach(([key, value]) => {
+        formattedData.allocation[key] = Number(value);
+      });
     }
 
-    if (!formattedData.tokenomics.totalSupply || !formattedData.tokenomics.initialPrice || 
-        !formattedData.tokenomics.maxSupply || !formattedData.tokenomics.decimals) {
-      throw new Error('All tokenomics fields are required');
+    // Format vesting data
+    if (projectData.vesting) {
+      Object.entries(projectData.vesting).forEach(([key, value]) => {
+        formattedData.vesting[key] = {
+          tgePercentage: Number(value.tgePercentage),
+          cliffMonths: Number(value.cliffMonths),
+          vestingMonths: Number(value.vestingMonths)
+        };
+      });
     }
 
-    if (Object.keys(formattedData.allocation).length === 0) {
-      throw new Error('At least one allocation category is required');
-    }
+    // Validate required fields
+    if (!formattedData.name) throw new Error('Project name is required');
+    if (!formattedData.description) throw new Error('Project description is required');
+    if (!formattedData.tokenomics.totalSupply) throw new Error('Total supply is required');
+    if (!formattedData.tokenomics.initialPrice) throw new Error('Initial price is required');
+    if (!formattedData.tokenomics.maxSupply) throw new Error('Max supply is required');
+    if (!formattedData.tokenomics.decimals) throw new Error('Decimals is required');
+    if (Object.keys(formattedData.allocation).length === 0) throw new Error('At least one allocation category is required');
+    if (Object.keys(formattedData.vesting).length === 0) throw new Error('Vesting information is required');
 
-    if (Object.keys(formattedData.vesting).length === 0) {
-      throw new Error('Vesting information is required for all allocation categories');
-    }
-
-    // Log the exact data being sent
+    // Log the formatted data
     console.log('Formatted project data:', JSON.stringify(formattedData, null, 2));
     
     const response = await api.post('/api/projects', formattedData);
     console.log('Create project response:', response.data);
     return response.data;
   } catch (error) {
-    // Log detailed error information
-    console.error('Create project error details:', {
+    console.error('Create project error:', {
       message: error.message,
       response: error.response?.data,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      headers: error.response?.headers,
-      config: {
-        url: error.config?.url,
-        method: error.config?.method,
-        data: error.config?.data
-      }
+      status: error.response?.status
     });
     
-    // Create a more detailed error message
-    let errorMessage = 'Failed to create project. ';
-    if (error.response?.data?.message) {
-      errorMessage += error.response.data.message;
-    } else if (error.response?.status === 500) {
-      errorMessage += 'Server error. Please try again later.';
+    if (error.response?.status === 500) {
+      throw new Error('Server error. Please try again later.');
     } else if (error.response?.status === 400) {
-      errorMessage += 'Invalid project data. Please check your inputs.';
+      throw new Error(error.response.data?.message || 'Invalid project data');
     } else if (!error.response) {
-      errorMessage += 'Network error. Please check your connection.';
+      throw new Error('Network error. Please check your connection.');
     } else {
-      errorMessage += error.message;
+      throw new Error(error.message || 'Failed to create project');
     }
-    
-    throw new Error(errorMessage);
   }
 };
 
