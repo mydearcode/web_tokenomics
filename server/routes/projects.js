@@ -39,55 +39,170 @@ router.get('/:id', async (req, res) => {
 // Create project
 router.post('/', protect, async (req, res) => {
   try {
-    // Set the owner to the authenticated user
+    console.log('Project creation request:', {
+      body: req.body,
+      userId: req.user._id
+    });
+
+    // Validate required fields
+    const { name, description, tokenName, tokenSymbol, tokenomics } = req.body;
+
+    if (!name || !description || !tokenName || !tokenSymbol) {
+      return res.status(400).json({
+        message: 'Missing required fields',
+        details: {
+          name: !name ? 'Name is required' : null,
+          description: !description ? 'Description is required' : null,
+          tokenName: !tokenName ? 'Token name is required' : null,
+          tokenSymbol: !tokenSymbol ? 'Token symbol is required' : null
+        }
+      });
+    }
+
+    if (!tokenomics || !tokenomics.totalSupply) {
+      return res.status(400).json({
+        message: 'Missing tokenomics data',
+        details: {
+          totalSupply: !tokenomics?.totalSupply ? 'Total supply is required' : null
+        }
+      });
+    }
+
+    // Create project data with owner
     const projectData = {
       ...req.body,
       owner: req.user._id
     };
-    
+
+    console.log('Creating project with data:', projectData);
+
+    // Create and save the project
     const project = new Project(projectData);
     await project.save();
-    
-    // Populate the owner field before sending the response
+
+    // Populate owner field with user details
     await project.populate('owner', 'name email');
-    
+
+    console.log('Project created successfully:', project);
+
     res.status(201).json(project);
   } catch (error) {
-    console.error('Create project error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Project creation error:', error);
+
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => ({
+        field: err.path,
+        message: err.message
+      }));
+      return res.status(400).json({
+        message: 'Validation error',
+        errors: validationErrors
+      });
+    }
+
+    // Handle other errors
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message
+    });
   }
 });
 
 // Update project
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
   try {
-    const project = await Project.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    
+    console.log('Project update request:', {
+      id: req.params.id,
+      body: req.body,
+      userId: req.user._id
+    });
+
+    // Find the project
+    const project = await Project.findById(req.params.id);
+
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    
-    res.json(project);
+
+    // Check if user is the owner
+    if (project.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this project' });
+    }
+
+    // Validate required fields
+    const { name, description, tokenName, tokenSymbol, tokenomics } = req.body;
+
+    if (!name || !description || !tokenName || !tokenSymbol) {
+      return res.status(400).json({
+        message: 'Missing required fields',
+        details: {
+          name: !name ? 'Name is required' : null,
+          description: !description ? 'Description is required' : null,
+          tokenName: !tokenName ? 'Token name is required' : null,
+          tokenSymbol: !tokenSymbol ? 'Token symbol is required' : null
+        }
+      });
+    }
+
+    if (!tokenomics || !tokenomics.totalSupply) {
+      return res.status(400).json({
+        message: 'Missing tokenomics data',
+        details: {
+          totalSupply: !tokenomics?.totalSupply ? 'Total supply is required' : null
+        }
+      });
+    }
+
+    // Update project data
+    const updatedProject = await Project.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    ).populate('owner', 'name email');
+
+    console.log('Project updated successfully:', updatedProject);
+
+    res.json(updatedProject);
   } catch (error) {
-    console.error('Update project error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Project update error:', error);
+
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => ({
+        field: err.path,
+        message: err.message
+      }));
+      return res.status(400).json({
+        message: 'Validation error',
+        errors: validationErrors
+      });
+    }
+
+    // Handle other errors
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message
+    });
   }
 });
 
 // Delete project
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
   try {
-    const project = await Project.findByIdAndDelete(req.params.id);
-    
+    const project = await Project.findById(req.params.id);
+
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    
-    res.json({ message: 'Project deleted' });
+
+    // Check if user is the owner of the project
+    if (project.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to delete this project' });
+    }
+
+    await project.remove();
+    res.json({ message: 'Project removed' });
   } catch (error) {
     console.error('Delete project error:', error);
     res.status(500).json({ message: 'Server error' });

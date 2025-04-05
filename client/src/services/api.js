@@ -163,79 +163,51 @@ export const changePassword = async (passwordData) => {
 // Project endpoints
 export const createProject = async (projectData) => {
   try {
-    console.log('Creating project with data:', JSON.stringify(projectData, null, 2));
-    
-    // Get the current user from localStorage
     const user = JSON.parse(localStorage.getItem('user'));
     const token = localStorage.getItem('token');
-    
-    if (!user || !user.id || !token) {
-      console.error('Authentication error:', { user, token });
-      throw new Error('Authentication token not found. Please log in again.');
+
+    if (!user || !token) {
+      throw new Error('User not authenticated');
     }
-    
-    // Format and validate data structure
+
+    // Format token for authorization header
+    const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+
+    // Format project data
     const formattedData = {
-      name: projectData.name?.trim(),
-      description: projectData.description?.trim(),
-      isPublic: Boolean(projectData.isPublic),
-      owner: user.id,
+      name: projectData.name,
+      description: projectData.description,
+      isPublic: projectData.isPublic,
+      tokenName: projectData.tokenName,
+      tokenSymbol: projectData.tokenSymbol,
       tokenomics: {
-        tokenName: projectData.tokenName?.trim(),
-        tokenSymbol: projectData.tokenSymbol?.trim(),
-        totalSupply: Number(projectData.tokenomics?.totalSupply),
-        initialPrice: Number(projectData.tokenomics?.initialPrice),
-        maxSupply: Number(projectData.tokenomics?.maxSupply),
-        decimals: Number(projectData.tokenomics?.decimals),
-        allocation: {}
+        totalSupply: Number(projectData.tokenomics.totalSupply),
+        initialPrice: Number(projectData.tokenomics.initialPrice),
+        maxSupply: Number(projectData.tokenomics.maxSupply),
+        decimals: Number(projectData.tokenomics.decimals),
+        allocation: projectData.tokenomics.allocation
       },
-      vesting: {}
+      vesting: projectData.vesting
     };
 
-    // Format allocation data
-    if (projectData.allocation) {
-      Object.entries(projectData.allocation).forEach(([key, value]) => {
-        formattedData.tokenomics.allocation[key] = Number(value);
-      });
-    }
+    console.log('Formatted project data:', formattedData);
 
-    // Format vesting data
-    if (projectData.vesting) {
-      Object.entries(projectData.vesting).forEach(([key, value]) => {
-        formattedData.vesting[key] = {
-          tgePercentage: Number(value.tgePercentage),
-          cliffMonths: Number(value.cliffMonths),
-          vestingMonths: Number(value.vestingMonths)
-        };
-      });
-    }
+    const response = await api.post('/api/projects', formattedData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': formattedToken
+      }
+    });
 
-    // Log the formatted data
-    console.log('Formatted project data:', JSON.stringify(formattedData, null, 2));
-    
-    // Use the api instance which already has the token in headers
-    const response = await api.post('/api/projects', formattedData);
-    
-    console.log('Project created successfully:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Create project error:', {
-      message: error.response?.data?.message || error.message,
-      response: error.response,
-      status: error.response?.status,
-      statusText: error.response?.statusText
-    });
-    
-    // Check if it's an authentication error
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // Clear local storage and redirect to login
-      localStorage.removeItem('token');
+    console.error('Error creating project:', error);
+    if (error.response?.status === 401) {
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
       window.location.href = '/login';
-      throw new Error('Your session has expired. Please log in again.');
     }
-    
-    throw new Error(error.response?.data?.message || 'Failed to create project');
+    throw error;
   }
 };
 
@@ -304,20 +276,59 @@ export const getProject = async (id) => {
 
 export const updateProject = async (id, projectData) => {
   try {
-    const response = await api.put(`/api/projects/${id}`, projectData);
+    const user = JSON.parse(localStorage.getItem('user'));
+    const token = localStorage.getItem('token');
+
+    if (!user || !token) {
+      throw new Error('User not authenticated');
+    }
+
+    // Format token for authorization header
+    const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+
+    // Format project data
+    const formattedData = {
+      name: projectData.name,
+      description: projectData.description,
+      isPublic: projectData.isPublic,
+      tokenName: projectData.tokenName,
+      tokenSymbol: projectData.tokenSymbol,
+      tokenomics: {
+        totalSupply: Number(projectData.tokenomics.totalSupply),
+        initialPrice: Number(projectData.tokenomics.initialPrice),
+        maxSupply: Number(projectData.tokenomics.maxSupply),
+        decimals: Number(projectData.tokenomics.decimals),
+        allocation: projectData.tokenomics.allocation
+      },
+      vesting: projectData.vesting
+    };
+
+    console.log('Formatted project data:', formattedData);
+
+    const response = await api.put(`/api/projects/${id}`, formattedData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': formattedToken
+      }
+    });
+
     return response.data;
   } catch (error) {
-    console.error('Update project error:', error.response?.data || error.message);
+    console.error('Error updating project:', error);
+    if (error.response?.status === 401) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
     throw error;
   }
 };
 
-export const deleteProject = async (id) => {
+export const deleteProject = async (projectId) => {
   try {
-    const response = await api.delete(`/api/projects/${id}`);
+    const response = await api.delete(`/api/projects/${projectId}`);
     return response.data;
   } catch (error) {
-    console.error('Delete project error:', error.response?.data || error.message);
     throw error;
   }
 };

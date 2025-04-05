@@ -3,15 +3,95 @@ const mongoose = require('mongoose');
 const ProjectSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true
+    required: [true, 'Please provide a project name'],
+    trim: true,
+    maxlength: [100, 'Project name cannot be more than 100 characters']
   },
   description: {
-    type: String
+    type: String,
+    required: [true, 'Please provide a project description'],
+    trim: true,
+    maxlength: [1000, 'Project description cannot be more than 1000 characters']
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  isPublic: {
+    type: Boolean,
+    default: false
+  },
+  tokenName: {
+    type: String,
+    required: [true, 'Please provide a token name'],
+    trim: true,
+    maxlength: [50, 'Token name cannot be more than 50 characters']
+  },
+  tokenSymbol: {
+    type: String,
+    required: [true, 'Please provide a token symbol'],
+    trim: true,
+    maxlength: [10, 'Token symbol cannot be more than 10 characters']
+  },
+  tokenomics: {
+    totalSupply: {
+      type: Number,
+      required: [true, 'Please provide a total supply'],
+      min: [0, 'Total supply cannot be negative']
+    },
+    initialPrice: {
+      type: Number,
+      required: [true, 'Please provide an initial price'],
+      min: [0, 'Initial price cannot be negative']
+    },
+    maxSupply: {
+      type: Number,
+      required: [true, 'Please provide a max supply'],
+      min: [0, 'Max supply cannot be negative']
+    },
+    decimals: {
+      type: Number,
+      required: [true, 'Please provide decimals'],
+      min: [0, 'Decimals cannot be negative'],
+      max: [18, 'Decimals cannot be more than 18'],
+      default: 18
+    },
+    allocation: {
+      type: Map,
+      of: Number,
+      required: [true, 'Please provide allocation data'],
+      validate: {
+        validator: function(allocation) {
+          // Calculate total allocation
+          const total = Array.from(allocation.values()).reduce((sum, value) => sum + value, 0);
+          // Check if total is 100%
+          return Math.abs(total - 100) < 0.01;
+        },
+        message: 'Total allocation must be 100%'
+      }
+    }
+  },
+  vesting: {
+    type: Map,
+    of: {
+      tgePercentage: {
+        type: Number,
+        required: [true, 'Please provide TGE percentage'],
+        min: [0, 'TGE percentage cannot be negative'],
+        max: [100, 'TGE percentage cannot be more than 100']
+      },
+      cliffMonths: {
+        type: Number,
+        required: [true, 'Please provide cliff months'],
+        min: [0, 'Cliff months cannot be negative']
+      },
+      vestingMonths: {
+        type: Number,
+        required: [true, 'Please provide vesting months'],
+        min: [1, 'Vesting months must be at least 1']
+      }
+    }
   },
   collaborators: [{
     user: {
@@ -24,88 +104,6 @@ const ProjectSchema = new mongoose.Schema({
       default: 'viewer'
     }
   }],
-  tokenomics: {
-    // Basic Token Information
-    blockchain: {
-      type: String,
-      default: 'Ethereum'
-    },
-    tokenName: {
-      type: String,
-      required: true
-    },
-    tokenSymbol: {
-      type: String,
-      required: true
-    },
-    tokenDecimals: {
-      type: Number,
-      default: 18
-    },
-    totalSupply: {
-      type: Number,
-      required: true
-    },
-    maxSupply: {
-      type: Number
-    },
-    
-    // Allocation and Distribution
-    allocation: {
-      type: Map,
-      of: {
-        percentage: Number,
-        amount: Number
-      }
-    },
-    
-    // Token Sale Information
-    tokenSale: {
-      fundraisingAmount: Number,
-      tokenType: String,
-      acceptedCurrencies: [String],
-      preSeedRoundDate: Date,
-      seedRoundDate: Date,
-      privateRoundDate: Date,
-      publicRoundDate: Date,
-      initialExchangeListingDate: Date
-    },
-    
-    // Token Features
-    features: {
-      transactionFee: {
-        enabled: {
-          type: Boolean,
-          default: false
-        },
-        percentage: Number
-      },
-      mintFunction: {
-        enabled: {
-          type: Boolean,
-          default: false
-        }
-      },
-      burnFunction: {
-        enabled: {
-          type: Boolean,
-          default: false
-        }
-      }
-    }
-  },
-  vesting: {
-    type: Map,
-    of: {
-      tgePercentage: Number,
-      cliffMonths: Number,
-      vestingMonths: Number
-    }
-  },
-  isPublic: {
-    type: Boolean,
-    default: false
-  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -150,5 +148,16 @@ ProjectSchema.pre('save', function(next) {
   
   next();
 });
+
+// Update the updatedAt field before updating
+ProjectSchema.pre('findOneAndUpdate', function(next) {
+  this.set({ updatedAt: Date.now() });
+  next();
+});
+
+// Add remove method
+ProjectSchema.methods.remove = async function() {
+  return this.deleteOne();
+};
 
 module.exports = mongoose.model('Project', ProjectSchema); 
