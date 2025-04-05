@@ -186,14 +186,19 @@ export const createProject = async (projectData) => {
     console.error('Create project error:', {
       message: error.message,
       response: error.response?.data,
-      status: error.response?.status
+      status: error.response?.status,
+      statusText: error.response?.statusText
     });
     
-    if (error.response?.status === 500) {
-      throw new Error('Server error. Please try again later.');
-    } else if (error.response?.status === 400) {
-      throw new Error(error.response.data?.message || 'Invalid project data');
-    } else if (!error.response) {
+    if (error.response) {
+      if (error.response.status === 500) {
+        throw new Error('Server error. Please try again later.');
+      } else if (error.response.status === 400) {
+        throw new Error(error.response.data?.message || 'Invalid project data');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to create project');
+      }
+    } else if (error.request) {
       throw new Error('Network error. Please check your connection.');
     } else {
       throw new Error(error.message || 'Failed to create project');

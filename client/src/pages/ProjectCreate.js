@@ -223,6 +223,7 @@ const ProjectCreate = () => {
     } catch (err) {
       console.error('Project creation error:', err);
       setError(err.message || 'Failed to create project');
+      // Don't navigate on error
     } finally {
       setLoading(false);
     }
