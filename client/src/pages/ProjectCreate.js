@@ -193,7 +193,8 @@ const ProjectCreate = () => {
         )
       };
       
-      console.log('Submitting project data:', projectData);
+      // Log the exact data being sent
+      console.log('Submitting project data:', JSON.stringify(projectData, null, 2));
       await createProject(projectData);
       
       // Add a small delay before navigating to ensure the project is saved

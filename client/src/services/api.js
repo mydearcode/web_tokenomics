@@ -180,7 +180,8 @@ export const createProject = async (projectData) => {
       throw new Error('Vesting information is required for all allocation categories');
     }
 
-    console.log('Formatted project data:', formattedData);
+    // Log the exact data being sent
+    console.log('Formatted project data:', JSON.stringify(formattedData, null, 2));
     
     const response = await api.post('/api/projects', formattedData);
     console.log('Create project response:', response.data);
