@@ -37,14 +37,24 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create project
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req, res) => {
   try {
-    const project = new Project(req.body);
+    // Set the owner to the authenticated user
+    const projectData = {
+      ...req.body,
+      owner: req.user._id
+    };
+    
+    const project = new Project(projectData);
     await project.save();
+    
+    // Populate the owner field before sending the response
+    await project.populate('owner', 'name email');
+    
     res.status(201).json(project);
   } catch (error) {
     console.error('Create project error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

@@ -165,100 +165,50 @@ export const createProject = async (projectData) => {
   try {
     console.log('Creating project with data:', JSON.stringify(projectData, null, 2));
     
-    // Get the current user from localStorage
-    const user = JSON.parse(localStorage.getItem('user'));
+    // Get the token from localStorage
     const token = localStorage.getItem('token');
     
-    if (!user || !user._id || !token) {
-      console.error('Authentication error:', { user, token });
-      throw new Error('Kullanıcı kimliği doğrulanmadı. Lütfen tekrar giriş yapın.');
+    if (!token) {
+      throw new Error('Authentication token not found. Please log in again.');
     }
     
-    // Format and validate data structure
-    const formattedData = {
-      name: projectData.name?.trim(),
-      description: projectData.description?.trim(),
-      isPublic: Boolean(projectData.isPublic),
-      owner: user._id,
-      tokenName: projectData.tokenName?.trim(),
-      tokenSymbol: projectData.tokenSymbol?.trim(),
-      tokenomics: {
-        totalSupply: Number(projectData.tokenomics?.totalSupply),
-        initialPrice: Number(projectData.tokenomics?.initialPrice),
-        maxSupply: Number(projectData.tokenomics?.maxSupply),
-        decimals: Number(projectData.tokenomics?.decimals)
-      },
-      allocation: {},
-      vesting: {}
-    };
-
-    // Format allocation data
-    if (projectData.allocation) {
-      Object.entries(projectData.allocation).forEach(([key, value]) => {
-        formattedData.allocation[key] = Number(value);
-      });
-    }
-
-    // Format vesting data
-    if (projectData.vesting) {
-      Object.entries(projectData.vesting).forEach(([key, value]) => {
-        formattedData.vesting[key] = {
-          tgePercentage: Number(value.tgePercentage),
-          cliffMonths: Number(value.cliffMonths),
-          vestingMonths: Number(value.vestingMonths)
-        };
-      });
-    }
-
-    // Validate required fields
-    if (!formattedData.name) throw new Error('Proje adı gereklidir');
-    if (!formattedData.description) throw new Error('Proje açıklaması gereklidir');
-    if (!formattedData.owner) throw new Error('Proje sahibi gereklidir');
-    if (!formattedData.tokenName) throw new Error('Token adı gereklidir');
-    if (!formattedData.tokenSymbol) throw new Error('Token sembolü gereklidir');
-    if (!formattedData.tokenomics.totalSupply) throw new Error('Toplam arz gereklidir');
-    if (!formattedData.tokenomics.initialPrice) throw new Error('Başlangıç fiyatı gereklidir');
-    if (!formattedData.tokenomics.maxSupply) throw new Error('Maksimum arz gereklidir');
-    if (!formattedData.tokenomics.decimals) throw new Error('Ondalık basamak sayısı gereklidir');
-    if (Object.keys(formattedData.allocation).length === 0) throw new Error('En az bir dağıtım kategorisi gereklidir');
-    if (Object.keys(formattedData.vesting).length === 0) throw new Error('Vesting bilgisi gereklidir');
-
-    // Log the formatted data
-    console.log('Formatted project data:', JSON.stringify(formattedData, null, 2));
+    // Make sure the token is properly formatted
+    const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
     
-    // Make the request directly with axios
-    const response = await axios.post(`${API_URL}/api/projects`, formattedData, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+    // Log the token being used (first 20 chars for security)
+    console.log('Using token:', formattedToken.substring(0, 20) + '...');
+    
+    const response = await axios.post(
+      `${API_URL}/api/projects`,
+      projectData,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': formattedToken
+        }
       }
-    });
+    );
     
-    console.log('Create project response:', response.data);
+    console.log('Project created successfully:', response.data);
     return response.data;
   } catch (error) {
     console.error('Create project error:', {
-      message: error.message,
-      response: error.response?.data,
+      message: error.response?.data?.message || error.message,
+      response: error.response,
       status: error.response?.status,
       statusText: error.response?.statusText
     });
     
-    if (error.response) {
-      if (error.response.status === 401) {
-        throw new Error('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
-      } else if (error.response.status === 500) {
-        throw new Error('Sunucu hatası. Lütfen daha sonra tekrar deneyin.');
-      } else if (error.response.status === 400) {
-        throw new Error(error.response.data?.message || 'Geçersiz proje verisi');
-      } else {
-        throw new Error(error.response.data?.message || 'Proje oluşturulamadı');
-      }
-    } else if (error.request) {
-      throw new Error('Ağ hatası. Lütfen bağlantınızı kontrol edin.');
-    } else {
-      throw new Error(error.message || 'Proje oluşturulamadı');
+    // Check if it's an authentication error
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Clear local storage and redirect to login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      throw new Error('Your session has expired. Please log in again.');
     }
+    
+    throw new Error(error.response?.data?.message || 'Failed to create project');
   }
 };
 
