@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { register as apiRegister, login as apiLogin } from '../services/api';
+import { login as apiLogin, register as apiRegister } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -7,92 +7,73 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [token, setToken] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const initializeAuth = async () => {
+    // Check for existing user session
+    const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    
+    if (storedUser && token) {
       try {
-        const token = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-        
-        if (token && storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          setToken(token);
-          setIsAuthenticated(true);
-        } else {
-          // Token veya user yoksa, state'i temizle
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setUser(null);
-          setToken(null);
-          setIsAuthenticated(false);
-        }
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        console.log('Restored user session:', { user: parsedUser, token });
       } catch (err) {
-        console.error('Auth initialization error:', err);
-        localStorage.removeItem('token');
+        console.error('Error parsing stored user:', err);
         localStorage.removeItem('user');
-        setUser(null);
-        setToken(null);
-        setIsAuthenticated(false);
-      } finally {
-        setLoading(false);
+        localStorage.removeItem('token');
       }
-    };
-
-    initializeAuth();
+    }
+    setLoading(false);
   }, []);
+
+  const login = async (email, password) => {
+    try {
+      setError(null);
+      setLoading(true);
+      console.log('Attempting login with:', { email });
+      
+      const response = await apiLogin(email, password);
+      console.log('Login response:', response);
+      
+      if (response.token && response.user) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setUser(response.user);
+        return response;
+      } else {
+        throw new Error('Invalid login response');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const register = async (userData) => {
     try {
       setError(null);
-      const response = await apiRegister(userData);
-      if (response.token && response.user) {
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        setUser(response.user);
-        setToken(response.token);
-        setIsAuthenticated(true);
-      }
-      return response;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  };
-
-  const login = async (email, password) => {
-    try {
       setLoading(true);
-      setError('');
+      console.log('Attempting registration with:', { email: userData.email });
       
-      console.log('Attempting login with:', { email });
-      
-      const response = await apiLogin({ email, password });
-      console.log('Login response:', response);
+      const response = await apiRegister(userData);
+      console.log('Register response:', response);
       
       if (response.token && response.user) {
-        // Store token and user data
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
-        
-        // Update auth state
         setUser(response.user);
-        setToken(response.token);
-        setIsAuthenticated(true);
-        
-        // Set default authorization header for all future requests
-        apiLogin.defaults.headers.common['Authorization'] = `Bearer ${response.token}`;
-        
         return response;
       } else {
-        throw new Error('Invalid response from server');
+        throw new Error('Invalid registration response');
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      setError(error.message || 'Login failed');
-      throw error;
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err.message || 'Registration failed');
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -102,29 +83,24 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    setToken(null);
-    setIsAuthenticated(false);
     setError(null);
-  };
-
-  const updateUser = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
   };
 
   const value = {
     user,
     loading,
     error,
-    register,
     login,
+    register,
     logout,
-    updateUser,
-    isAuthenticated,
-    token
+    isAuthenticated: !!user
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
@@ -133,4 +109,6 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
+
+export default AuthContext; 

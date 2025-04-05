@@ -141,6 +141,7 @@ export const createProject = async (projectData) => {
     const token = localStorage.getItem('token');
     
     if (!user || !user._id || !token) {
+      console.error('Authentication error:', { user, token });
       throw new Error('User not authenticated');
     }
     
