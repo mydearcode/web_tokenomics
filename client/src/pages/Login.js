@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Container,
@@ -9,58 +9,42 @@ import {
   Button,
   Link,
   Alert,
-  CircularProgress,
-  Paper
+  CircularProgress
 } from '@mui/material';
-import { useFormik } from 'formik';
-import * as Yup from 'yup';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const formik = useFormik({
-    initialValues: {
-      email: '',
-      password: ''
-    },
-    validationSchema: Yup.object({
-      email: Yup.string()
-        .email('Geçerli bir e-posta adresi giriniz')
-        .required('E-posta adresi gereklidir'),
-      password: Yup.string()
-        .required('Şifre gereklidir')
-    }),
-    onSubmit: async (values, { setSubmitting }) => {
-      try {
-        setError('');
-        setLoading(true);
-        console.log('Submitting login form with values:', { email: values.email });
-        
-        // Ensure email and password are properly formatted
-        const email = values.email.trim();
-        const password = values.password;
-        
-        await login(email, password);
-        navigate('/dashboard');
-      } catch (err) {
-        console.error('Login error:', err);
-        // Display a more user-friendly error message
-        if (err.message.includes('Geçersiz e-posta veya şifre')) {
-          setError('E-posta adresi veya şifre hatalı. Lütfen tekrar deneyin.');
-        } else if (err.message.includes('Kimlik doğrulama başarısız')) {
-          setError('Kimlik doğrulama başarısız. Lütfen tekrar giriş yapın.');
-        } else {
-          setError(err.message || 'Giriş başarısız oldu. Lütfen tekrar deneyin.');
-        }
-      } finally {
-        setLoading(false);
-        setSubmitting(false);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      console.log('Attempting login with:', { email });
+      await login(email, password);
+      console.log('Login successful, redirecting to dashboard');
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Login error:', err);
+      let errorMessage = 'Giriş başarısız oldu. Lütfen tekrar deneyin.';
+      
+      if (err.message.includes('Geçersiz e-posta veya şifre')) {
+        errorMessage = 'E-posta adresi veya şifre hatalı. Lütfen tekrar deneyin.';
+      } else if (err.message.includes('Kimlik doğrulama başarısız')) {
+        errorMessage = 'Kimlik doğrulama başarısız. Lütfen tekrar giriş yapın.';
       }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -69,78 +53,59 @@ const Login = () => {
           marginTop: 8,
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center'
+          alignItems: 'center',
         }}
       >
-        <Paper
-          elevation={3}
-          sx={{
-            padding: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%'
-          }}
-        >
-          <Typography component="h1" variant="h5">
-            Giriş Yap
-          </Typography>
-          
+        <Typography component="h1" variant="h5">
+          Giriş Yap
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           {error && (
-            <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+            <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
-          
-          <Box component="form" onSubmit={formik.handleSubmit} sx={{ mt: 1, width: '100%' }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="E-posta Adresi"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={formik.values.email}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.email && Boolean(formik.errors.email)}
-              helperText={formik.touched.email && formik.errors.email}
-              disabled={loading}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Şifre"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={formik.values.password}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.password && Boolean(formik.errors.password)}
-              helperText={formik.touched.password && formik.errors.password}
-              disabled={loading}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading || formik.isSubmitting}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Giriş Yap'}
-            </Button>
-            <Box sx={{ textAlign: 'center' }}>
-              <Link component={RouterLink} to="/register" variant="body2">
-                Hesabınız yok mu? Kayıt olun
-              </Link>
-            </Box>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="email"
+            label="E-posta Adresi"
+            name="email"
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Şifre"
+            type="password"
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+          />
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Giriş Yap'}
+          </Button>
+          <Box sx={{ textAlign: 'center' }}>
+            <Link href="/register" variant="body2">
+              Hesabınız yok mu? Kayıt olun
+            </Link>
           </Box>
-        </Paper>
+        </Box>
       </Box>
     </Container>
   );

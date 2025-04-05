@@ -15,7 +15,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Add request interceptor for logging and token management
+// Add request interceptor for token management
 api.interceptors.request.use(
   (config) => {
     // Get token from localStorage
@@ -27,25 +27,10 @@ api.interceptors.request.use(
         method: config.method,
         token: token.substring(0, 10) + '...'
       });
-    } else {
-      console.warn('No token found for request:', {
-        url: config.url,
-        method: config.method
-      });
     }
-    
-    // Log request details
-    console.log('Request interceptor:', {
-      url: config.url,
-      method: config.method,
-      headers: config.headers,
-      data: config.data,
-    });
-    
     return config;
   },
   (error) => {
-    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -101,21 +86,16 @@ export const login = async (email, password) => {
   try {
     console.log('Logging in user:', { email });
     
-    // Ensure email and password are properly formatted
-    const loginData = {
-      email: email.trim(),
-      password: password
-    };
-    
-    console.log('Login request data:', loginData);
-    
     // Clear any existing token and user data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     delete api.defaults.headers.common['Authorization'];
     
-    // Make the request directly with axios to avoid interceptor issues
-    const response = await axios.post(`${API_URL}/api/auth/login`, loginData, {
+    // Make the request directly with axios
+    const response = await axios.post(`${API_URL}/api/auth/login`, {
+      email: email.trim(),
+      password: password
+    }, {
       headers: {
         'Content-Type': 'application/json'
       }
@@ -246,8 +226,14 @@ export const createProject = async (projectData) => {
     // Log the formatted data
     console.log('Formatted project data:', JSON.stringify(formattedData, null, 2));
     
-    // Use the api instance which already has the token in its headers
-    const response = await api.post('/api/projects', formattedData);
+    // Make the request directly with axios
+    const response = await axios.post(`${API_URL}/api/projects`, formattedData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
     console.log('Create project response:', response.data);
     return response.data;
   } catch (error) {
