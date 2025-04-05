@@ -133,11 +133,18 @@ export const createProject = async (projectData) => {
   try {
     console.log('Creating project with data:', JSON.stringify(projectData, null, 2));
     
+    // Get the current user from localStorage
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || !user._id) {
+      throw new Error('User not authenticated');
+    }
+    
     // Format and validate data structure
     const formattedData = {
       name: projectData.name?.trim(),
       description: projectData.description?.trim(),
       isPublic: Boolean(projectData.isPublic),
+      owner: user._id, // Add the owner field
       tokenomics: {
         totalSupply: Number(projectData.tokenomics?.totalSupply),
         initialPrice: Number(projectData.tokenomics?.initialPrice),
@@ -171,6 +178,7 @@ export const createProject = async (projectData) => {
     // Validate required fields
     if (!formattedData.name) throw new Error('Project name is required');
     if (!formattedData.description) throw new Error('Project description is required');
+    if (!formattedData.owner) throw new Error('Owner is required');
     if (!formattedData.tokenomics.totalSupply) throw new Error('Total supply is required');
     if (!formattedData.tokenomics.initialPrice) throw new Error('Initial price is required');
     if (!formattedData.tokenomics.maxSupply) throw new Error('Max supply is required');
