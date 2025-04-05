@@ -138,7 +138,9 @@ export const createProject = async (projectData) => {
     
     // Get the current user from localStorage
     const user = JSON.parse(localStorage.getItem('user'));
-    if (!user || !user._id) {
+    const token = localStorage.getItem('token');
+    
+    if (!user || !user._id || !token) {
       throw new Error('User not authenticated');
     }
     
@@ -147,7 +149,7 @@ export const createProject = async (projectData) => {
       name: projectData.name?.trim(),
       description: projectData.description?.trim(),
       isPublic: Boolean(projectData.isPublic),
-      owner: user._id, // Add the owner field
+      owner: user._id,
       tokenomics: {
         totalSupply: Number(projectData.tokenomics?.totalSupply),
         initialPrice: Number(projectData.tokenomics?.initialPrice),
@@ -193,6 +195,9 @@ export const createProject = async (projectData) => {
 
     // Log the formatted data
     console.log('Formatted project data:', JSON.stringify(formattedData, null, 2));
+    
+    // Set authorization header
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     
     const response = await api.post('/api/projects', formattedData);
     console.log('Create project response:', response.data);

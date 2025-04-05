@@ -21,17 +21,14 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (values, { setSubmitting }) => {
+  const handleSubmit = async (values) => {
     try {
       setError('');
-      setLoading(true);
-      await login({ email: values.email, password: values.password });
+      await login(values.email, values.password);
       navigate('/');
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message || 'Login failed');
-    } finally {
-      setLoading(false);
-      setSubmitting(false);
     }
   };
 
