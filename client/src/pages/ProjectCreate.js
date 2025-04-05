@@ -143,97 +143,42 @@ const ProjectCreate = () => {
     setLoading(true);
 
     try {
-      // Validate form data
-      if (!formData.name?.trim()) {
-        throw new Error('Project name is required');
-      }
-      if (!formData.description?.trim()) {
-        throw new Error('Project description is required');
-      }
-      if (!formData.tokenName?.trim()) {
-        throw new Error('Token name is required');
-      }
-      if (!formData.tokenSymbol?.trim()) {
-        throw new Error('Token symbol is required');
-      }
+      // Validate total allocation
+      const totalAllocation = Object.values(formData.allocation).reduce((sum, value) => {
+        const numValue = Number(value);
+        return sum + (isNaN(numValue) ? 0 : numValue);
+      }, 0);
 
-      // Validate tokenomics data
-      const tokenomics = formData.tokenomics;
-      if (!tokenomics.totalSupply || isNaN(Number(tokenomics.totalSupply))) {
-        throw new Error('Total supply must be a valid number');
-      }
-      if (!tokenomics.initialPrice || isNaN(Number(tokenomics.initialPrice))) {
-        throw new Error('Initial price must be a valid number');
-      }
-      if (!tokenomics.maxSupply || isNaN(Number(tokenomics.maxSupply))) {
-        throw new Error('Max supply must be a valid number');
-      }
-      if (!tokenomics.decimals || isNaN(Number(tokenomics.decimals))) {
-        throw new Error('Decimals must be a valid number');
-      }
-
-      // Validate allocation total
-      const totalAllocation = Object.values(formData.allocation).reduce((sum, value) => sum + Number(value), 0);
       if (Math.abs(totalAllocation - 100) > 0.01) {
         throw new Error(`Total allocation must be 100%. Current total: ${totalAllocation}%`);
       }
 
-      // Validate vesting data
-      for (const [category, vesting] of Object.entries(formData.vesting)) {
-        if (!vesting.tgePercentage || isNaN(Number(vesting.tgePercentage))) {
-          throw new Error(`TGE percentage must be a valid number for ${category}`);
-        }
-        if (!vesting.cliffMonths || isNaN(Number(vesting.cliffMonths))) {
-          throw new Error(`Cliff months must be a valid number for ${category}`);
-        }
-        if (!vesting.vestingMonths || isNaN(Number(vesting.vestingMonths))) {
-          throw new Error(`Vesting months must be a valid number for ${category}`);
-        }
-      }
-
+      // Format project data
       const projectData = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
+        name: formData.name,
+        description: formData.description,
         isPublic: formData.isPublic,
-        tokenName: formData.tokenName.trim(),
-        tokenSymbol: formData.tokenSymbol.trim(),
+        tokenName: formData.tokenName,
+        tokenSymbol: formData.tokenSymbol,
         tokenomics: {
           totalSupply: Number(formData.tokenomics.totalSupply),
           initialPrice: Number(formData.tokenomics.initialPrice),
           maxSupply: Number(formData.tokenomics.maxSupply),
-          decimals: Number(formData.tokenomics.decimals)
+          decimals: Number(formData.tokenomics.decimals),
+          allocation: formData.allocation
         },
-        allocation: Object.fromEntries(
-          Object.entries(formData.allocation).map(([key, value]) => [
-            key,
-            Number(value)
-          ])
-        ),
-        vesting: Object.fromEntries(
-          Object.entries(formData.vesting).map(([key, value]) => [
-            key,
-            {
-              tgePercentage: Number(value.tgePercentage),
-              cliffMonths: Number(value.cliffMonths),
-              vestingMonths: Number(value.vestingMonths)
-            }
-          ])
-        )
+        vesting: formData.vesting
       };
+
+      console.log('Submitting project data:', projectData);
+
+      const response = await createProject(projectData);
+      console.log('Project created successfully:', response);
       
-      // Log the exact data being sent
-      console.log('Submitting project data:', JSON.stringify(projectData, null, 2));
-      
-      await createProject(projectData);
-      
-      // Add a small delay before navigating to ensure the project is saved
-      setTimeout(() => {
-        navigate('/');
-      }, 1000);
+      navigate('/projects');
     } catch (err) {
       console.error('Project creation error:', err);
-      setError(err.message || 'Failed to create project');
-      // Don't navigate on error
+      setError(err.response?.data?.message || err.message || 'Failed to create project');
     } finally {
       setLoading(false);
     }

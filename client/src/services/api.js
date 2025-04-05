@@ -165,29 +165,56 @@ export const createProject = async (projectData) => {
   try {
     console.log('Creating project with data:', JSON.stringify(projectData, null, 2));
     
-    // Get the token from localStorage
+    // Get the current user from localStorage
+    const user = JSON.parse(localStorage.getItem('user'));
     const token = localStorage.getItem('token');
     
-    if (!token) {
+    if (!user || !user.id || !token) {
+      console.error('Authentication error:', { user, token });
       throw new Error('Authentication token not found. Please log in again.');
     }
     
-    // Make sure the token is properly formatted
-    const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    // Format and validate data structure
+    const formattedData = {
+      name: projectData.name?.trim(),
+      description: projectData.description?.trim(),
+      isPublic: Boolean(projectData.isPublic),
+      owner: user.id,
+      tokenomics: {
+        tokenName: projectData.tokenName?.trim(),
+        tokenSymbol: projectData.tokenSymbol?.trim(),
+        totalSupply: Number(projectData.tokenomics?.totalSupply),
+        initialPrice: Number(projectData.tokenomics?.initialPrice),
+        maxSupply: Number(projectData.tokenomics?.maxSupply),
+        decimals: Number(projectData.tokenomics?.decimals),
+        allocation: {}
+      },
+      vesting: {}
+    };
+
+    // Format allocation data
+    if (projectData.allocation) {
+      Object.entries(projectData.allocation).forEach(([key, value]) => {
+        formattedData.tokenomics.allocation[key] = Number(value);
+      });
+    }
+
+    // Format vesting data
+    if (projectData.vesting) {
+      Object.entries(projectData.vesting).forEach(([key, value]) => {
+        formattedData.vesting[key] = {
+          tgePercentage: Number(value.tgePercentage),
+          cliffMonths: Number(value.cliffMonths),
+          vestingMonths: Number(value.vestingMonths)
+        };
+      });
+    }
+
+    // Log the formatted data
+    console.log('Formatted project data:', JSON.stringify(formattedData, null, 2));
     
-    // Log the token being used (first 20 chars for security)
-    console.log('Using token:', formattedToken.substring(0, 20) + '...');
-    
-    const response = await axios.post(
-      `${API_URL}/api/projects`,
-      projectData,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': formattedToken
-        }
-      }
-    );
+    // Use the api instance which already has the token in headers
+    const response = await api.post('/api/projects', formattedData);
     
     console.log('Project created successfully:', response.data);
     return response.data;
