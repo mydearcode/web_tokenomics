@@ -162,6 +162,24 @@ export const createProject = async (projectData) => {
       )
     };
 
+    // Validate data before sending
+    if (!formattedData.name || !formattedData.description) {
+      throw new Error('Name and description are required');
+    }
+
+    if (!formattedData.tokenomics.totalSupply || !formattedData.tokenomics.initialPrice || 
+        !formattedData.tokenomics.maxSupply || !formattedData.tokenomics.decimals) {
+      throw new Error('All tokenomics fields are required');
+    }
+
+    if (Object.keys(formattedData.allocation).length === 0) {
+      throw new Error('At least one allocation category is required');
+    }
+
+    if (Object.keys(formattedData.vesting).length === 0) {
+      throw new Error('Vesting information is required for all allocation categories');
+    }
+
     console.log('Formatted project data:', formattedData);
     
     const response = await api.post('/api/projects', formattedData);
@@ -192,6 +210,8 @@ export const createProject = async (projectData) => {
       errorMessage += 'Invalid project data. Please check your inputs.';
     } else if (!error.response) {
       errorMessage += 'Network error. Please check your connection.';
+    } else {
+      errorMessage += error.message;
     }
     
     throw new Error(errorMessage);

@@ -166,8 +166,8 @@ const ProjectCreate = () => {
       }
 
       const projectData = {
-        name: formData.name,
-        description: formData.description,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         isPublic: formData.isPublic,
         tokenomics: {
           totalSupply: Number(formData.tokenomics.totalSupply),
@@ -199,10 +199,10 @@ const ProjectCreate = () => {
       // Add a small delay before navigating to ensure the project is saved
       setTimeout(() => {
         navigate('/');
-      }, 500);
+      }, 1000);
     } catch (err) {
       console.error('Project creation error:', err);
-      setError(err.message || 'Failed to create project. Please try again.');
+      setError(err.message || 'Failed to create project');
     } finally {
       setLoading(false);
     }
