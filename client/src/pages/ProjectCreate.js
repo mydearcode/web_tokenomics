@@ -39,9 +39,12 @@ const ProjectCreate = () => {
     name: '',
     description: '',
     isPublic: false,
-    tokenName: '',
-    tokenSymbol: '',
-    totalSupply: '',
+    tokenomics: {
+      totalSupply: '',
+      initialPrice: '',
+      maxSupply: '',
+      decimals: ''
+    },
     allocation: {},
     vesting: {}
   });
@@ -331,14 +334,83 @@ const ProjectCreate = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   type="number"
-                  name="totalSupply"
+                  name="tokenomics.totalSupply"
                   label="Total Supply"
-                  value={formData.totalSupply}
-                  onChange={handleInputChange}
+                  value={formData.tokenomics.totalSupply}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData(prev => ({
+                      ...prev,
+                      tokenomics: {
+                        ...prev.tokenomics,
+                        totalSupply: value
+                      }
+                    }));
+                  }}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  name="tokenomics.initialPrice"
+                  label="Initial Price"
+                  value={formData.tokenomics.initialPrice}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData(prev => ({
+                      ...prev,
+                      tokenomics: {
+                        ...prev.tokenomics,
+                        initialPrice: value
+                      }
+                    }));
+                  }}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  name="tokenomics.maxSupply"
+                  label="Max Supply"
+                  value={formData.tokenomics.maxSupply}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData(prev => ({
+                      ...prev,
+                      tokenomics: {
+                        ...prev.tokenomics,
+                        maxSupply: value
+                      }
+                    }));
+                  }}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  name="tokenomics.decimals"
+                  label="Decimals"
+                  value={formData.tokenomics.decimals}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData(prev => ({
+                      ...prev,
+                      tokenomics: {
+                        ...prev.tokenomics,
+                        decimals: value
+                      }
+                    }));
+                  }}
                   required
                 />
               </Grid>
