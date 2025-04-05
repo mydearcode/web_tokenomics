@@ -1,8 +1,39 @@
 const express = require('express');
 const router = express.Router();
-const Project = require('../models/Project');
+const mongoose = require('mongoose');
 const { protect } = require('../middleware/auth');
 const { checkProjectAccess, checkEditAccess } = require('../middleware/projectAccess');
+
+// Project model (temporary, should be moved to models folder)
+const ProjectSchema = new mongoose.Schema({
+  name: String,
+  description: String,
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  collaborators: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    role: String
+  }],
+  tokenomics: {
+    totalSupply: Number,
+    allocation: {
+      type: Map,
+      of: {
+        percentage: Number,
+        description: String
+      }
+    }
+  },
+  vesting: {
+    type: Map,
+    of: {
+      tgePercentage: Number,
+      cliffMonths: Number,
+      vestingMonths: Number
+    }
+  }
+});
+
+const Project = mongoose.model('Project', ProjectSchema);
 
 // Get all projects (public and user's own)
 router.get('/', protect, async (req, res) => {
