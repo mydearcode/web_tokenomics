@@ -14,7 +14,6 @@ import {
 import { Formik, Form, Field } from 'formik';
 import { loginSchema } from '../utils/validationSchemas';
 import { useAuth } from '../context/AuthContext';
-import { login as loginApi } from '../services/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -26,11 +25,10 @@ const Login = () => {
     try {
       setError('');
       setLoading(true);
-      const data = await loginApi(values.email, values.password);
-      login(data.token, data.user);
+      await login({ email: values.email, password: values.password });
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
       setSubmitting(false);

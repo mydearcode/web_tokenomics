@@ -39,15 +39,9 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor for better error handling
+// Add response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => {
-    console.log('Response:', {
-      status: response.status,
-      data: response.data,
-    });
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (error.response) {
       // Server responded with error
@@ -228,7 +222,7 @@ export const deleteProject = async (id) => {
 export const addProjectCollaborator = async (projectId, email, role) => {
   try {
     console.log('API: Adding collaborator:', { projectId, email, role });
-    const response = await api.post(`/projects/${projectId}/collaborators`, { email, role });
+    const response = await api.post(`/api/projects/${projectId}/collaborators`, { email, role });
     console.log('API: Add collaborator response:', response.data);
     return response.data;
   } catch (error) {
@@ -265,10 +259,7 @@ export const addProjectCollaborator = async (projectId, email, role) => {
       errorMessage = 'Sunucu yanıt vermiyor. İnternet bağlantınızı kontrol edin.';
     }
     
-    throw { 
-      message: errorMessage,
-      details: errorDetails 
-    };
+    throw new Error(errorMessage);
   }
 };
 
@@ -276,7 +267,7 @@ export const addProjectCollaborator = async (projectId, email, role) => {
 export const removeProjectCollaborator = async (projectId, userId) => {
   try {
     console.log('API: Removing collaborator:', { projectId, userId });
-    const response = await api.delete(`/projects/${projectId}/collaborators/${userId}`);
+    const response = await api.delete(`/api/projects/${projectId}/collaborators/${userId}`);
     console.log('API: Remove collaborator response:', response.data);
     return response.data;
   } catch (error) {
@@ -313,20 +304,17 @@ export const removeProjectCollaborator = async (projectId, userId) => {
       errorMessage = 'Sunucu yanıt vermiyor. İnternet bağlantınızı kontrol edin.';
     }
     
-    throw { 
-      message: errorMessage,
-      details: errorDetails 
-    };
+    throw new Error(errorMessage);
   }
 };
 
 // Search for users by email
 export const searchUsersByEmail = async (email) => {
   try {
-    const response = await api.get(`/users/search?email=${email}`);
+    const response = await api.get(`/api/users/search?email=${email}`);
     return response.data;
   } catch (error) {
-    throw error.response?.data || { message: error.message };
+    throw new Error(error.response?.data?.message || error.message);
   }
 };
 

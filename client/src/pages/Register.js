@@ -14,58 +14,25 @@ import {
 import { Formik, Form, Field } from 'formik';
 import { registerSchema } from '../utils/validationSchemas';
 import { useAuth } from '../context/AuthContext';
-import { register as registerApi } from '../services/api';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { register } = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (values, { setSubmitting, setErrors }) => {
+  const handleSubmit = async (values, { setSubmitting }) => {
     try {
       setError('');
       setLoading(true);
-      console.log('Submitting registration form:', values);
-      const data = await registerApi(values.name, values.email, values.password);
-      console.log('Registration successful:', data);
-      login(data.token, data.user);
+      await register({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+      });
       navigate('/');
     } catch (err) {
-      console.error('Registration error:', err);
-      let errorMessage = 'Registration failed';
-      
-      if (err.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        console.error('Error response:', err.response);
-        errorMessage = err.response.data?.message || `Server error: ${err.response.status}`;
-        
-        if (err.response.status === 403) {
-          errorMessage = 'Access forbidden. Please check your credentials.';
-        } else if (err.response.status === 0) {
-          errorMessage = 'Network error. Please check if the server is running.';
-        }
-        
-        // If there are validation errors from the server, set them in the form
-        if (err.response.data?.errors) {
-          const formErrors = {};
-          err.response.data.errors.forEach((error) => {
-            formErrors[error.field] = error.message;
-          });
-          setErrors(formErrors);
-        }
-      } else if (err.request) {
-        // The request was made but no response was received
-        console.error('Error request:', err.request);
-        errorMessage = 'No response from server. Please check if the server is running.';
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        console.error('Error message:', err.message);
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
+      setError(err.message || 'Registration failed');
     } finally {
       setLoading(false);
       setSubmitting(false);
