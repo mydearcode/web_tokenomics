@@ -13,7 +13,7 @@ exports.protect = async (req, res, next) => {
     
     // Check if token exists
     if (!token) {
-      return res.status(401).json({ message: 'Not authorized to access this route' });
+      return res.status(401).json({ message: 'Not authorized' });
     }
     
     try {
@@ -21,7 +21,7 @@ exports.protect = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       // Get user from token
-      const user = await User.findById(decoded.id);
+      const user = await User.findById(decoded.id).select('-password');
       
       if (!user) {
         return res.status(401).json({ message: 'User not found' });
@@ -31,7 +31,8 @@ exports.protect = async (req, res, next) => {
       req.user = user;
       next();
     } catch (error) {
-      return res.status(401).json({ message: 'Not authorized to access this route' });
+      console.error('Auth middleware error:', error);
+      res.status(401).json({ message: 'Not authorized' });
     }
   } catch (error) {
     next(error);

@@ -1,146 +1,86 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
+const Project = require('../models/Project');
+const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const { checkProjectAccess, checkEditAccess } = require('../middleware/projectAccess');
 
-// Project model (temporary, should be moved to models folder)
-const ProjectSchema = new mongoose.Schema({
-  name: String,
-  description: String,
-  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  collaborators: [{
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    role: String
-  }],
-  tokenomics: {
-    totalSupply: Number,
-    allocation: {
-      type: Map,
-      of: {
-        percentage: Number,
-        description: String
-      }
-    }
-  },
-  vesting: {
-    type: Map,
-    of: {
-      tgePercentage: Number,
-      cliffMonths: Number,
-      vestingMonths: Number
-    }
-  }
-});
-
-const Project = mongoose.model('Project', ProjectSchema);
-
-// Get all projects (public and user's own)
-router.get('/', protect, async (req, res) => {
+// Get all projects
+router.get('/', async (req, res) => {
   try {
-    // Find public projects and user's own projects
-    const projects = await Project.find({
-      $or: [
-        { isPublic: true },
-        { owner: req.user.id },
-        { 'collaborators.user': req.user.id }
-      ]
-    }).populate('owner', 'name email');
-    
-    res.json({
-      success: true,
-      count: projects.length,
-      data: projects
-    });
+    const projects = await Project.find()
+      .populate('owner', 'name email')
+      .populate('collaborators.user', 'name email');
+    res.json(projects);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Get projects error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Get a single project
-router.get('/:id', protect, checkProjectAccess, async (req, res) => {
+// Get single project
+router.get('/:id', async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
       .populate('owner', 'name email')
       .populate('collaborators.user', 'name email');
     
-    res.json({
-      success: true,
-      data: project
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Create a new project
-router.post('/', protect, async (req, res) => {
-  try {
-    console.log('Creating new project...');
-    console.log('User ID:', req.user._id);
-    
-    // Make sure owner is valid objectId
-    let ownerId;
-    try {
-      const mongoose = require('mongoose');
-      ownerId = new mongoose.Types.ObjectId(req.user._id);
-    } catch (err) {
-      console.error('Error converting owner ID to ObjectId:', err);
-      return res.status(500).json({ 
-        message: 'Invalid owner ID format', 
-        error: err.message 
-      });
-    }
-    
-    const project = new Project({
-      ...req.body,
-      owner: ownerId
-    });
-    
-    console.log('Saving new project...');
-    
-    await project.save();
-    
-    console.log('Project created successfully');
-    
-    res.status(201).json(project);
-  } catch (error) {
-    console.error('Error creating project:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Update a project
-router.put('/:id', protect, checkProjectAccess, checkEditAccess, async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    Object.assign(project, req.body);
-    await project.save();
+    
     res.json(project);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Get project error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Delete a project
-router.delete('/:id', protect, checkProjectAccess, async (req, res) => {
+// Create project
+router.post('/', async (req, res) => {
   try {
-    // Only owner can delete the project
-    if (req.projectAccess !== 'owner') {
-      return res.status(403).json({ message: 'Only the owner can delete this project' });
+    const project = new Project(req.body);
+    await project.save();
+    res.status(201).json(project);
+  } catch (error) {
+    console.error('Create project error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update project
+router.put('/:id', async (req, res) => {
+  try {
+    const project = await Project.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
     }
     
-    await Project.findByIdAndDelete(req.params.id);
-    
-    res.json({
-      success: true,
-      data: {}
-    });
+    res.json(project);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Update project error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete project
+router.delete('/:id', async (req, res) => {
+  try {
+    const project = await Project.findByIdAndDelete(req.params.id);
+    
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    
+    res.json({ message: 'Project deleted' });
+  } catch (error) {
+    console.error('Delete project error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
