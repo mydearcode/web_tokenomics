@@ -12,4 +12,5 @@ services:
       - key: FRONTEND_URL
         sync: false
       - key: PORT
-        value: 5001 
+        value: 5001
+    nodeVersion: 18 
