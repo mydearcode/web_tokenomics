@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API URL configuration for development and production
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
 console.log('API URL:', API_URL);
 
@@ -82,7 +82,7 @@ api.interceptors.response.use(
 export const register = async (name, email, password) => {
   try {
     console.log('Registering user:', { name, email });
-    const response = await api.post('/auth/register', { name, email, password });
+    const response = await api.post('/api/auth/register', { name, email, password });
     console.log('Register response:', response.data);
     return response.data;
   } catch (error) {
@@ -94,7 +94,7 @@ export const register = async (name, email, password) => {
 export const login = async (email, password) => {
   try {
     console.log('Logging in user:', { email });
-    const response = await api.post('/auth/login', { email, password });
+    const response = await api.post('/api/auth/login', { email, password });
     console.log('Login response:', response.data);
     return response.data;
   } catch (error) {
@@ -105,7 +105,7 @@ export const login = async (email, password) => {
 
 export const updateProfile = async (name, email) => {
   try {
-    const response = await api.put('/auth/profile', { name, email });
+    const response = await api.put('/api/auth/profile', { name, email });
     return response.data;
   } catch (error) {
     console.error('Update profile error:', error.response?.data || error.message);
@@ -115,7 +115,7 @@ export const updateProfile = async (name, email) => {
 
 export const changePassword = async (currentPassword, newPassword) => {
   try {
-    const response = await api.put('/auth/password', { currentPassword, newPassword });
+    const response = await api.put('/api/auth/password', { currentPassword, newPassword });
     return response.data;
   } catch (error) {
     console.error('Change password error:', error.response?.data || error.message);
@@ -127,7 +127,7 @@ export const changePassword = async (currentPassword, newPassword) => {
 export const createProject = async (projectData) => {
   try {
     console.log('Creating project:', projectData);
-    const response = await api.post('/projects', projectData);
+    const response = await api.post('/api/projects', projectData);
     console.log('Create project response:', response.data);
     
     // Log the structure of the response
@@ -147,7 +147,7 @@ export const createProject = async (projectData) => {
 export const getProjects = async () => {
   try {
     console.log('Fetching projects');
-    const response = await api.get('/projects');
+    const response = await api.get('/api/projects');
     console.log('Projects response:', response.data);
     
     // Log the structure of the response
@@ -191,7 +191,7 @@ export const getProjects = async () => {
 
 export const getProject = async (id) => {
   try {
-    const response = await api.get(`/projects/${id}`);
+    const response = await api.get(`/api/projects/${id}`);
     console.log('Project response:', response.data);
     
     // If response has data.data structure
