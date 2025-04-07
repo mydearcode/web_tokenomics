@@ -153,10 +153,11 @@ const ProjectCreate = () => {
     }));
   };
 
-  const handleAllocationChange = (value) => {
+  const handleAllocationChange = (e) => {
     if (!selectedCategory) return;
     
     const categoryKey = selectedCategory.toLowerCase();
+    const value = e.target.value;
     const numValue = Number(value) || 0;
     const totalSupply = Number(formData.tokenomics.totalSupply) || 0;
     
@@ -572,35 +573,39 @@ const ProjectCreate = () => {
 
           {vestingSchedule.length > 0 && (
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Vesting Schedule Preview
-              </Typography>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Month</TableCell>
-                      <TableCell>Category</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell align="right">Total Amount</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {vestingSchedule.map((item, index) => (
-                      <TableRow key={`${item.category}-${item.month}-${index}`}>
-                        <TableCell>{item.month}</TableCell>
-                        <TableCell>{item.category}</TableCell>
-                        <TableCell align="right">
-                          {item.amount.toLocaleString()}
-                        </TableCell>
-                        <TableCell align="right">
-                          {item.totalAmount.toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="h6">Vesting Schedule Preview</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Month</TableCell>
+                          <TableCell>Category</TableCell>
+                          <TableCell align="right">Amount</TableCell>
+                          <TableCell align="right">Total Amount</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {vestingSchedule.map((item, index) => (
+                          <TableRow key={`${item.category}-${item.month}-${index}`}>
+                            <TableCell>{item.month}</TableCell>
+                            <TableCell>{item.category.charAt(0).toUpperCase() + item.category.slice(1)}</TableCell>
+                            <TableCell align="right">
+                              {item.amount.toLocaleString()}
+                            </TableCell>
+                            <TableCell align="right">
+                              {item.totalAmount.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </AccordionDetails>
+              </Accordion>
             </Paper>
           )}
 
