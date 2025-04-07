@@ -236,15 +236,29 @@ const ProjectCreate = () => {
 
     try {
       // Validate form data
-      if (!formData.name || !formData.description) {
-        throw new Error('Please fill in all required fields');
+      if (!formData.name?.trim() || !formData.description?.trim()) {
+        throw new Error('Please fill in project name and description');
       }
 
       // Validate tokenomics data
       const tokenomics = formData.tokenomics;
-      if (!tokenomics.name || !tokenomics.symbol || !tokenomics.totalSupply || 
-          !tokenomics.initialPrice || !tokenomics.maxSupply || !tokenomics.decimals) {
-        throw new Error('Please fill in all tokenomics fields');
+      if (!tokenomics.name?.trim()) {
+        throw new Error('Token name is required');
+      }
+      if (!tokenomics.symbol?.trim()) {
+        throw new Error('Token symbol is required');
+      }
+      if (!tokenomics.totalSupply || Number(tokenomics.totalSupply) <= 0) {
+        throw new Error('Total supply must be greater than 0');
+      }
+      if (!tokenomics.initialPrice || Number(tokenomics.initialPrice) <= 0) {
+        throw new Error('Initial price must be greater than 0');
+      }
+      if (!tokenomics.maxSupply || Number(tokenomics.maxSupply) <= 0) {
+        throw new Error('Max supply must be greater than 0');
+      }
+      if (!tokenomics.decimals || Number(tokenomics.decimals) < 0 || Number(tokenomics.decimals) > 18) {
+        throw new Error('Decimals must be between 0 and 18');
       }
 
       // Validate allocation total
@@ -253,13 +267,14 @@ const ProjectCreate = () => {
         throw new Error(`Total allocation must be 100%. Current total: ${totalAllocation}%`);
       }
 
+      // Prepare project data
       const projectData = {
-        name: formData.name,
-        description: formData.description,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         isPublic: formData.isPublic,
         tokenomics: {
-          name: tokenomics.name,
-          symbol: tokenomics.symbol,
+          name: tokenomics.name.trim(),
+          symbol: tokenomics.symbol.trim(),
           totalSupply: Number(tokenomics.totalSupply),
           initialPrice: Number(tokenomics.initialPrice),
           maxSupply: Number(tokenomics.maxSupply),
@@ -277,18 +292,24 @@ const ProjectCreate = () => {
         vesting: Object.entries(formData.vesting).reduce((acc, [key, value]) => {
           if (formData.tokenomics.allocation[key]?.percentage > 0) {
             acc[key] = {
-              tgePercentage: Number(value.tgePercentage),
-              cliffMonths: Number(value.cliffMonths),
-              vestingMonths: Number(value.vestingMonths)
+              tgePercentage: Number(value.tgePercentage || 0),
+              cliffMonths: Number(value.cliffMonths || 0),
+              vestingMonths: Number(value.vestingMonths || 0)
             };
           }
           return acc;
         }, {})
       };
 
-      console.log('Submitting project data:', projectData);
+      // Log the data being sent
+      console.log('Submitting project data:', JSON.stringify(projectData, null, 2));
+
       const response = await createProject(projectData);
-      navigate(`/projects/${response.data._id}`);
+      if (response?.data?._id) {
+        navigate(`/projects/${response.data._id}`);
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (err) {
       console.error('Project creation error:', err);
       setError(err.message || 'Failed to create project. Please try again.');

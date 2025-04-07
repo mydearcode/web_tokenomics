@@ -170,14 +170,11 @@ export const createProject = async (projectData) => {
       throw new Error('User not authenticated');
     }
 
-    // Format token for authorization header
-    const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-
     // Format project data
     const formattedData = {
       name: projectData.name,
       description: projectData.description,
-      isPublic: projectData.isPublic,
+      isPublic: projectData.isPublic || false,
       tokenomics: {
         name: projectData.tokenomics.name,
         symbol: projectData.tokenomics.symbol,
@@ -185,12 +182,30 @@ export const createProject = async (projectData) => {
         initialPrice: Number(projectData.tokenomics.initialPrice),
         maxSupply: Number(projectData.tokenomics.maxSupply),
         decimals: Number(projectData.tokenomics.decimals),
-        allocation: projectData.tokenomics.allocation
+        allocation: Object.entries(projectData.tokenomics.allocation).reduce((acc, [key, value]) => {
+          if (value.percentage > 0) {
+            acc[key] = {
+              percentage: Number(value.percentage),
+              amount: Number(value.amount)
+            };
+          }
+          return acc;
+        }, {})
       },
-      vesting: projectData.vesting
+      vesting: Object.entries(projectData.vesting).reduce((acc, [key, value]) => {
+        if (projectData.tokenomics.allocation[key]?.percentage > 0) {
+          acc[key] = {
+            tgePercentage: Number(value.tgePercentage || 0),
+            cliffMonths: Number(value.cliffMonths || 0),
+            vestingMonths: Number(value.vestingMonths || 0)
+          };
+        }
+        return acc;
+      }, {})
     };
 
-    console.log('Formatted project data:', formattedData);
+    // Log the formatted data for debugging
+    console.log('Sending project data to API:', JSON.stringify(formattedData, null, 2));
 
     const response = await api.post('/api/projects', formattedData);
     return response;
