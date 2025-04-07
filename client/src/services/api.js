@@ -175,9 +175,9 @@ export const createProject = async (projectData) => {
       name: projectData.name.trim(),
       description: projectData.description.trim(),
       isPublic: projectData.isPublic || false,
+      tokenName: projectData.tokenomics.name.trim(),
+      tokenSymbol: projectData.tokenomics.symbol.trim(),
       tokenomics: {
-        name: projectData.tokenomics.name.trim(),
-        symbol: projectData.tokenomics.symbol.trim(),
         totalSupply: Number(projectData.tokenomics.totalSupply),
         initialPrice: Number(projectData.tokenomics.initialPrice),
         maxSupply: Number(projectData.tokenomics.maxSupply),
@@ -297,9 +297,9 @@ export const updateProject = async (id, projectData) => {
       name: projectData.name.trim(),
       description: projectData.description.trim(),
       isPublic: projectData.isPublic || false,
+      tokenName: projectData.tokenomics.name.trim(),
+      tokenSymbol: projectData.tokenomics.symbol.trim(),
       tokenomics: {
-        name: projectData.tokenomics.name.trim(),
-        symbol: projectData.tokenomics.symbol.trim(),
         totalSupply: Number(projectData.tokenomics.totalSupply),
         initialPrice: Number(projectData.tokenomics.initialPrice),
         maxSupply: Number(projectData.tokenomics.maxSupply),
