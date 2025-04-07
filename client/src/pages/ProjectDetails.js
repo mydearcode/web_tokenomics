@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { getProject } from '../services/api';
 import AllocationChart from '../components/AllocationChart';
-import VestingChart from '../components/VestingChart';
+import VestingScheduleChart from '../components/VestingScheduleChart';
 import ProjectActions from '../components/ProjectActions';
 
 const ProjectDetails = () => {
@@ -143,13 +143,7 @@ const ProjectDetails = () => {
           </Grid>
 
           <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>Vesting Schedule</Typography>
-              <VestingChart 
-                allocation={project.tokenomics.allocation} 
-                vesting={project.vesting} 
-              />
-            </Paper>
+            <VestingScheduleChart project={project} />
           </Grid>
         </Grid>
       </Box>

@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from './context/AuthContext';
-import { checkProjectAccess } from './services/api';
+import { checkProjectAccess, getProject } from './services/api';
 
 // Layout components
 import Navbar from './components/layout/Navbar';
@@ -57,22 +57,29 @@ const EditorRoute = ({ children }) => {
       }
       
       try {
-        console.log('EditorRoute: Starting access check for project:', projectId);
-        console.log('EditorRoute: Current user:', user);
+        // Get project details to check access
+        const response = await getProject(projectId);
+        const project = response.data || response;
         
-        // Use the dedicated API method for access checking
-        const accessData = await checkProjectAccess(projectId);
+        // Check if user is owner or editor
+        const isOwner = project.owner && (
+          (typeof project.owner === 'string' && project.owner === user.id) ||
+          (project.owner._id && project.owner._id === user.id)
+        );
         
-        console.log('EditorRoute: Access check response:', accessData);
+        const isEditor = project.collaborators && project.collaborators.some(c => {
+          if (!c || !c.user) return false;
+          
+          const collabUserId = typeof c.user === 'object' && c.user._id 
+            ? c.user._id 
+            : c.user;
+            
+          return collabUserId === user.id && c.role === 'editor';
+        });
         
-        // Check if user can edit based on the API response
-        const canEdit = accessData.access && accessData.access.canEdit;
-        
-        console.log('EditorRoute: Can user edit?', canEdit);
-        
-        setHasAccess(canEdit);
+        setHasAccess(isOwner || isEditor);
       } catch (error) {
-        console.error('EditorRoute: Error checking project access:', error);
+        console.error('Error checking project access:', error);
         setHasAccess(false);
       } finally {
         setLoading(false);
@@ -92,11 +99,9 @@ const EditorRoute = ({ children }) => {
   
   // Redirect to project details if the user doesn't have edit permission
   if (!hasAccess) {
-    console.log('EditorRoute: Access denied - redirecting to project details page');
     return <Navigate to={`/projects/${projectId}`} />;
   }
   
-  console.log('EditorRoute: Access granted - rendering editor page');
   return children;
 };
 
