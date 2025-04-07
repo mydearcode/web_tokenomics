@@ -170,14 +170,14 @@ export const createProject = async (projectData) => {
       throw new Error('User not authenticated');
     }
 
-    // Format project data
+    // Format project data according to API expectations
     const formattedData = {
-      name: projectData.name,
-      description: projectData.description,
+      name: projectData.name.trim(),
+      description: projectData.description.trim(),
       isPublic: projectData.isPublic || false,
+      tokenName: projectData.tokenomics.name.trim(),
+      tokenSymbol: projectData.tokenomics.symbol.trim(),
       tokenomics: {
-        name: projectData.tokenomics.name,
-        symbol: projectData.tokenomics.symbol,
         totalSupply: Number(projectData.tokenomics.totalSupply),
         initialPrice: Number(projectData.tokenomics.initialPrice),
         maxSupply: Number(projectData.tokenomics.maxSupply),
@@ -292,35 +292,43 @@ export const updateProject = async (id, projectData) => {
       throw new Error('User not authenticated');
     }
 
-    // Format token for authorization header
-    const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-
     // Format project data
     const formattedData = {
-      name: projectData.name,
-      description: projectData.description,
-      isPublic: projectData.isPublic,
-      tokenName: projectData.tokenName,
-      tokenSymbol: projectData.tokenSymbol,
+      name: projectData.name.trim(),
+      description: projectData.description.trim(),
+      isPublic: projectData.isPublic || false,
+      tokenName: projectData.tokenomics.name.trim(),
+      tokenSymbol: projectData.tokenomics.symbol.trim(),
       tokenomics: {
         totalSupply: Number(projectData.tokenomics.totalSupply),
         initialPrice: Number(projectData.tokenomics.initialPrice),
         maxSupply: Number(projectData.tokenomics.maxSupply),
         decimals: Number(projectData.tokenomics.decimals),
-        allocation: projectData.tokenomics.allocation
+        allocation: Object.entries(projectData.tokenomics.allocation).reduce((acc, [key, value]) => {
+          if (value.percentage > 0) {
+            acc[key] = {
+              percentage: Number(value.percentage),
+              amount: Number(value.amount)
+            };
+          }
+          return acc;
+        }, {})
       },
-      vesting: projectData.vesting
+      vesting: Object.entries(projectData.vesting).reduce((acc, [key, value]) => {
+        if (projectData.tokenomics.allocation[key]?.percentage > 0) {
+          acc[key] = {
+            tgePercentage: Number(value.tgePercentage || 0),
+            cliffMonths: Number(value.cliffMonths || 0),
+            vestingMonths: Number(value.vestingMonths || 0)
+          };
+        }
+        return acc;
+      }, {})
     };
 
     console.log('Formatted project data:', formattedData);
 
-    const response = await api.put(`/api/projects/${id}`, formattedData, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': formattedToken
-      }
-    });
-
+    const response = await api.put(`/api/projects/${id}`, formattedData);
     return response.data;
   } catch (error) {
     console.error('Error updating project:', error);
