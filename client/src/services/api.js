@@ -175,23 +175,23 @@ export const createProject = async (projectData) => {
       name: projectData.name.trim(),
       description: projectData.description.trim(),
       isPublic: projectData.isPublic || false,
-      tokenName: projectData.tokenomics.name.trim(),
-      tokenSymbol: projectData.tokenomics.symbol.trim(),
-      tokenomics: {
+      token: {
+        name: projectData.tokenomics.name.trim(),
+        symbol: projectData.tokenomics.symbol.trim(),
         totalSupply: Number(projectData.tokenomics.totalSupply),
         initialPrice: Number(projectData.tokenomics.initialPrice),
         maxSupply: Number(projectData.tokenomics.maxSupply),
-        decimals: Number(projectData.tokenomics.decimals),
-        allocation: Object.entries(projectData.tokenomics.allocation).reduce((acc, [key, value]) => {
-          if (value.percentage > 0) {
-            acc[key] = {
-              percentage: Number(value.percentage),
-              amount: Number(value.amount)
-            };
-          }
-          return acc;
-        }, {})
+        decimals: Number(projectData.tokenomics.decimals)
       },
+      allocation: Object.entries(projectData.tokenomics.allocation).reduce((acc, [key, value]) => {
+        if (value.percentage > 0) {
+          acc[key] = {
+            percentage: Number(value.percentage),
+            amount: Number(value.amount)
+          };
+        }
+        return acc;
+      }, {}),
       vesting: Object.entries(projectData.vesting).reduce((acc, [key, value]) => {
         if (projectData.tokenomics.allocation[key]?.percentage > 0) {
           acc[key] = {
@@ -297,23 +297,23 @@ export const updateProject = async (id, projectData) => {
       name: projectData.name.trim(),
       description: projectData.description.trim(),
       isPublic: projectData.isPublic || false,
-      tokenName: projectData.tokenomics.name.trim(),
-      tokenSymbol: projectData.tokenomics.symbol.trim(),
-      tokenomics: {
+      token: {
+        name: projectData.tokenomics.name.trim(),
+        symbol: projectData.tokenomics.symbol.trim(),
         totalSupply: Number(projectData.tokenomics.totalSupply),
         initialPrice: Number(projectData.tokenomics.initialPrice),
         maxSupply: Number(projectData.tokenomics.maxSupply),
-        decimals: Number(projectData.tokenomics.decimals),
-        allocation: Object.entries(projectData.tokenomics.allocation).reduce((acc, [key, value]) => {
-          if (value.percentage > 0) {
-            acc[key] = {
-              percentage: Number(value.percentage),
-              amount: Number(value.amount)
-            };
-          }
-          return acc;
-        }, {})
+        decimals: Number(projectData.tokenomics.decimals)
       },
+      allocation: Object.entries(projectData.tokenomics.allocation).reduce((acc, [key, value]) => {
+        if (value.percentage > 0) {
+          acc[key] = {
+            percentage: Number(value.percentage),
+            amount: Number(value.amount)
+          };
+        }
+        return acc;
+      }, {}),
       vesting: Object.entries(projectData.vesting).reduce((acc, [key, value]) => {
         if (projectData.tokenomics.allocation[key]?.percentage > 0) {
           acc[key] = {
