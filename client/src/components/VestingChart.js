@@ -22,6 +22,40 @@ const VestingChart = ({ schedules }) => {
     );
   }
 
+  // Prepare data for the chart
+  const maxMonths = Math.max(...schedules.map(s => s.cliffMonths + s.vestingMonths));
+  const chartData = Array.from({ length: maxMonths + 1 }, (_, month) => {
+    const monthData = { month };
+    
+    schedules.forEach(schedule => {
+      const {
+        category,
+        totalTokens,
+        tgeAmount,
+        remainingTokens,
+        monthlyVesting,
+        cliffMonths,
+        vestingMonths
+      } = schedule;
+
+      let currentAmount = tgeAmount;
+      
+      if (month === 0) {
+        monthData[category] = currentAmount;
+      } else if (month <= cliffMonths) {
+        monthData[category] = currentAmount;
+      } else if (month <= cliffMonths + vestingMonths) {
+        const monthsSinceCliff = month - cliffMonths;
+        currentAmount = tgeAmount + (monthsSinceCliff * monthlyVesting);
+        monthData[category] = Math.min(currentAmount, totalTokens);
+      } else {
+        monthData[category] = totalTokens;
+      }
+    });
+
+    return monthData;
+  });
+
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -36,7 +70,7 @@ const VestingChart = ({ schedules }) => {
           </Typography>
           {payload.map((entry, index) => (
             <Typography key={index} variant="body2" sx={{ color: entry.color }}>
-              {entry.name}: {formatNumber(entry.value)}
+              {entry.name}: {formatNumber(entry.value)} tokens
             </Typography>
           ))}
         </Box>
@@ -45,33 +79,12 @@ const VestingChart = ({ schedules }) => {
     return null;
   };
 
-  // Prepare data for the chart
-  const chartData = schedules.reduce((acc, schedule) => {
-    const { category, totalTokens, tgeAmount, monthlyVesting, cliffMonths, vestingMonths } = schedule;
-    const remainingTokens = totalTokens - tgeAmount;
-    const monthlyAmount = remainingTokens / vestingMonths;
-
-    let currentAmount = tgeAmount;
-    for (let month = 0; month <= cliffMonths + vestingMonths; month++) {
-      if (!acc[month]) {
-        acc[month] = { month };
-      }
-      if (month >= cliffMonths) {
-        currentAmount += monthlyAmount;
-      }
-      acc[month][category] = currentAmount;
-    }
-    return acc;
-  }, {});
-
-  const chartDataArray = Object.values(chartData);
-
   return (
     <Box sx={{ width: '100%', height: '100%' }}>
       <Box sx={{ height: 400, mb: 4 }}>
         <ResponsiveContainer>
           <AreaChart
-            data={chartDataArray}
+            data={chartData}
             margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
@@ -83,6 +96,7 @@ const VestingChart = ({ schedules }) => {
             <YAxis 
               stroke={theme.palette.text.secondary}
               tick={{ fill: theme.palette.text.secondary }}
+              tickFormatter={formatNumber}
             />
             <Tooltip content={<CustomTooltip />} />
             {schedules.map((schedule, index) => (
@@ -112,8 +126,8 @@ const VestingChart = ({ schedules }) => {
             <TableRow>
               <TableCell sx={{ color: 'text.secondary' }}>Category</TableCell>
               <TableCell align="right" sx={{ color: 'text.secondary' }}>Total Tokens</TableCell>
+              <TableCell align="right" sx={{ color: 'text.secondary' }}>TGE (%)</TableCell>
               <TableCell align="right" sx={{ color: 'text.secondary' }}>TGE Amount</TableCell>
-              <TableCell align="right" sx={{ color: 'text.secondary' }}>Remaining</TableCell>
               <TableCell align="right" sx={{ color: 'text.secondary' }}>Monthly Vesting</TableCell>
               <TableCell align="right" sx={{ color: 'text.secondary' }}>Cliff (Months)</TableCell>
               <TableCell align="right" sx={{ color: 'text.secondary' }}>Vesting (Months)</TableCell>
@@ -129,10 +143,10 @@ const VestingChart = ({ schedules }) => {
                   {formatNumber(schedule.totalTokens)}
                 </TableCell>
                 <TableCell align="right" sx={{ color: 'text.primary' }}>
-                  {formatNumber(schedule.tgeAmount)}
+                  {schedule.tgePercentage}%
                 </TableCell>
                 <TableCell align="right" sx={{ color: 'text.primary' }}>
-                  {formatNumber(schedule.totalTokens - schedule.tgeAmount)}
+                  {formatNumber(schedule.tgeAmount)}
                 </TableCell>
                 <TableCell align="right" sx={{ color: 'text.primary' }}>
                   {formatNumber(schedule.monthlyVesting)}

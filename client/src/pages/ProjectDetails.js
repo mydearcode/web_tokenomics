@@ -35,16 +35,14 @@ const ProjectDetails = () => {
         }
         setProject(data);
         
-        // Prepare allocation data for the pie chart
-        const allocationData = Object.entries(data.tokenomics).map(([category, percentage]) => ({
-          name: category,
-          value: percentage
-        }));
-        setAllocationCategories(allocationData);
+        // Set allocation data directly from project data
+        setAllocationCategories(data);
 
         // Calculate vesting schedules
-        const schedules = calculateVestingSchedule(data);
-        setVestingSchedules(schedules);
+        if (data.tokenomics?.allocation && data.vesting) {
+          const schedules = calculateVestingSchedule(data);
+          setVestingSchedules(schedules);
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -56,16 +54,16 @@ const ProjectDetails = () => {
   }, [id]);
 
   const calculateVestingSchedule = (projectData) => {
-    if (!projectData.tokenomics || !projectData.vesting) return [];
+    if (!projectData.tokenomics?.allocation || !projectData.vesting) return [];
 
-    return Object.entries(projectData.tokenomics).map(([category, percentage]) => {
+    return Object.entries(projectData.tokenomics.allocation).map(([category, allocation]) => {
       const vestingData = projectData.vesting[category];
       if (!vestingData) return null;
 
-      const totalTokens = (projectData.totalSupply * percentage) / 100;
+      const totalTokens = allocation.amount;
       const tgeAmount = (totalTokens * vestingData.tgePercentage) / 100;
       const remainingTokens = totalTokens - tgeAmount;
-      const monthlyVesting = remainingTokens / vestingData.vestingMonths;
+      const monthlyVesting = vestingData.vestingMonths > 0 ? remainingTokens / vestingData.vestingMonths : 0;
 
       return {
         category,
@@ -74,7 +72,8 @@ const ProjectDetails = () => {
         remainingTokens,
         monthlyVesting,
         cliffMonths: vestingData.cliffMonths,
-        vestingMonths: vestingData.vestingMonths
+        vestingMonths: vestingData.vestingMonths,
+        tgePercentage: vestingData.tgePercentage
       };
     }).filter(Boolean);
   };
@@ -152,7 +151,7 @@ const ProjectDetails = () => {
                   Token Allocation
                 </Typography>
                 <Box sx={{ height: 400 }}>
-                  <AllocationChart data={allocationCategories} />
+                  <AllocationChart data={project.tokenomics} />
                 </Box>
               </Paper>
             </Grid>
@@ -169,6 +168,18 @@ const ProjectDetails = () => {
                   Token Information
                 </Typography>
                 <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">Token Name</Typography>
+                    <Typography variant="body1" sx={{ color: 'text.primary' }}>
+                      {project.tokenName || 'N/A'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">Token Symbol</Typography>
+                    <Typography variant="body1" sx={{ color: 'text.primary' }}>
+                      {project.tokenSymbol || 'N/A'}
+                    </Typography>
+                  </Grid>
                   <Grid item xs={6}>
                     <Typography variant="body2" color="text.secondary">Total Supply</Typography>
                     <Typography variant="body1" sx={{ color: 'text.primary' }}>
@@ -190,7 +201,7 @@ const ProjectDetails = () => {
                   <Grid item xs={6}>
                     <Typography variant="body2" color="text.secondary">Decimals</Typography>
                     <Typography variant="body1" sx={{ color: 'text.primary' }}>
-                      {project.tokenomics?.decimals || '0'}
+                      {project.tokenomics?.decimals || '18'}
                     </Typography>
                   </Grid>
                 </Grid>

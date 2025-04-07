@@ -7,10 +7,19 @@ const COLORS = [
   '#82CA9D', '#FFC658', '#FF7C43', '#A4DE6C', '#D0ED57'
 ];
 
+const formatNumber = (num) => {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(2)}M`;
+  } else if (num >= 1000) {
+    return `${(num / 1000).toFixed(2)}K`;
+  }
+  return num.toFixed(2);
+};
+
 const AllocationChart = ({ data }) => {
   const theme = useTheme();
 
-  if (!data || data.length === 0) {
+  if (!data || !data.allocation || Object.keys(data.allocation).length === 0) {
     return (
       <Box sx={{ p: 2, textAlign: 'center' }}>
         <Typography>No allocation data available</Typography>
@@ -18,8 +27,16 @@ const AllocationChart = ({ data }) => {
     );
   }
 
+  // Transform allocation data for the chart
+  const chartData = Object.entries(data.allocation).map(([category, value]) => ({
+    name: category,
+    value: value.percentage,
+    amount: value.amount
+  }));
+
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
+      const data = payload[0].payload;
       return (
         <Box sx={{
           background: 'rgba(0, 0, 0, 0.8)',
@@ -28,10 +45,10 @@ const AllocationChart = ({ data }) => {
           border: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
           <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>
-            {payload[0].name}
+            {data.name}
           </Typography>
           <Typography variant="body2" sx={{ color: 'white' }}>
-            {payload[0].value}%
+            {data.value}% ({formatNumber(data.amount)} tokens)
           </Typography>
         </Box>
       );
@@ -44,18 +61,18 @@ const AllocationChart = ({ data }) => {
       <ResponsiveContainer>
         <PieChart>
           <Pie
-            data={data}
+            data={chartData}
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+            label={({ name, value }) => `${name}: ${value}%`}
             outerRadius={150}
             fill="#8884d8"
             dataKey="value"
             animationBegin={0}
             animationDuration={1500}
           >
-            {data.map((entry, index) => (
+            {chartData.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`} 
                 fill={COLORS[index % COLORS.length]}
@@ -68,9 +85,9 @@ const AllocationChart = ({ data }) => {
           <Legend 
             verticalAlign="bottom" 
             height={36}
-            formatter={(value) => (
-              <Typography variant="body2" sx={{ color: 'white' }}>
-                {value}
+            formatter={(value, entry) => (
+              <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                {value}: {entry.payload.value}% ({formatNumber(entry.payload.amount)} tokens)
               </Typography>
             )}
           />

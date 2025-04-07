@@ -18,12 +18,18 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { deleteProject } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const ProjectActions = ({ project }) => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
+
+  const isOwner = project.owner._id === user?._id;
+  const isEditor = project.collaborators?.some(c => c.user._id === user?._id && c.role === 'editor');
+  const canEdit = isOwner || isEditor;
 
   const handleMenuClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -43,11 +49,17 @@ const ProjectActions = ({ project }) => {
   };
 
   const handleEdit = () => {
-    navigate(`/projects/${project._id}/edit`);
+    if (canEdit) {
+      navigate(`/projects/${project._id}/edit`);
+    }
     handleMenuClose();
   };
 
   const handleDelete = async () => {
+    if (!isOwner) {
+      return;
+    }
+
     if (window.confirm('Are you sure you want to delete this project?')) {
       try {
         await deleteProject(project._id);
@@ -93,16 +105,18 @@ const ProjectActions = ({ project }) => {
           }
         }}
       >
-        <MenuItem onClick={handleEdit} sx={{ 
-          '&:hover': { 
-            background: alpha(theme.palette.primary.main, 0.1) 
-          }
-        }}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" sx={{ color: theme.palette.primary.main }} />
-          </ListItemIcon>
-          <ListItemText>Edit Project</ListItemText>
-        </MenuItem>
+        {canEdit && (
+          <MenuItem onClick={handleEdit} sx={{ 
+            '&:hover': { 
+              background: alpha(theme.palette.primary.main, 0.1) 
+            }
+          }}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" sx={{ color: theme.palette.primary.main }} />
+            </ListItemIcon>
+            <ListItemText>Edit Project</ListItemText>
+          </MenuItem>
+        )}
 
         <MenuItem onClick={handleShareClick} sx={{ 
           '&:hover': { 
@@ -115,16 +129,18 @@ const ProjectActions = ({ project }) => {
           <ListItemText>Share Project</ListItemText>
         </MenuItem>
 
-        <MenuItem onClick={handleDelete} sx={{ 
-          '&:hover': { 
-            background: alpha(theme.palette.error.main, 0.1) 
-          }
-        }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
-          </ListItemIcon>
-          <ListItemText sx={{ color: theme.palette.error.main }}>Delete Project</ListItemText>
-        </MenuItem>
+        {isOwner && (
+          <MenuItem onClick={handleDelete} sx={{ 
+            '&:hover': { 
+              background: alpha(theme.palette.error.main, 0.1) 
+            }
+          }}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
+            </ListItemIcon>
+            <ListItemText sx={{ color: theme.palette.error.main }}>Delete Project</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
       <Menu
