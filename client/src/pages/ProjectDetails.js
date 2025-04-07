@@ -112,7 +112,7 @@ const ProjectDetails = () => {
     const vesting = projectData.vesting;
 
     Object.entries(allocation).forEach(([category, percentage]) => {
-      const vestingData = vesting.get(category);
+      const vestingData = vesting[category];
       if (vestingData) {
         const totalTokens = (totalSupply * percentage) / 100;
         const tgeAmount = (totalTokens * vestingData.tgePercentage) / 100;
