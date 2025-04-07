@@ -270,6 +270,11 @@ export const getProject = async (id) => {
     return response.data;
   } catch (error) {
     console.error('Get project error:', error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
     throw error;
   }
 };

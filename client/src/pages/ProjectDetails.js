@@ -54,30 +54,37 @@ const ProjectDetails = () => {
     const fetchProject = async () => {
       try {
         setLoading(true);
-        const response = await getProject(id);
-        setProject(response.data);
+        const projectData = await getProject(id);
+        
+        if (!projectData) {
+          setError('Project not found');
+          return;
+        }
+
+        setProject(projectData);
         
         // Determine project access
-        if (response.data.owner._id === user?._id) {
+        if (projectData.owner._id === user?._id) {
           setProjectAccess('owner');
-        } else if (response.data.collaborators?.some(c => c.user._id === user?._id)) {
+        } else if (projectData.collaborators?.some(c => c.user._id === user?._id)) {
           setProjectAccess('collaborator');
-        } else if (response.data.isPublic) {
+        } else if (projectData.isPublic) {
           setProjectAccess('public');
         }
 
         // Calculate vesting schedules
-        if (response.data.tokenomics && response.data.vesting) {
-          const schedules = calculateVestingSchedule(response.data);
+        if (projectData.tokenomics && projectData.vesting) {
+          const schedules = calculateVestingSchedule(projectData);
           setVestingSchedules(schedules);
         }
 
         // Prepare allocation data for visualization
-        if (response.data.tokenomics?.allocation) {
-          const categories = prepareAllocationData(response.data.tokenomics.allocation);
+        if (projectData.tokenomics?.allocation) {
+          const categories = prepareAllocationData(projectData.tokenomics.allocation);
           setAllocationCategories(categories);
         }
       } catch (err) {
+        console.error('Error fetching project:', err);
         setError(err.response?.data?.message || 'Failed to fetch project details');
       } finally {
         setLoading(false);

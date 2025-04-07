@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get single project
-router.get('/:id', async (req, res) => {
+router.get('/:id', protect, async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
       .populate('owner', 'name email')
@@ -27,6 +27,16 @@ router.get('/:id', async (req, res) => {
     
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Check if user has access to the project
+    const isOwner = project.owner._id.toString() === req.user._id.toString();
+    const isCollaborator = project.collaborators.some(
+      c => c.user._id.toString() === req.user._id.toString()
+    );
+    
+    if (!isOwner && !isCollaborator && !project.isPublic) {
+      return res.status(403).json({ message: 'Not authorized to access this project' });
     }
     
     res.json(project);

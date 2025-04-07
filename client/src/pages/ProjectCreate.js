@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -26,6 +26,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { createProject } from '../services/api';
@@ -45,96 +49,95 @@ const ProjectCreate = () => {
       totalSupply: '',
       initialPrice: '',
       maxSupply: '',
-      decimals: ''
+      decimals: '18'
     },
     allocation: {},
     vesting: {}
   });
 
-  const [allocationCategories, setAllocationCategories] = useState([]);
+  const [allocationCategories, setAllocationCategories] = useState([
+    'Team',
+    'Advisors',
+    'Marketing',
+    'Development',
+    'Community',
+    'Reserve',
+    'Liquidity'
+  ]);
 
-  // Dialog state
-  const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Team');
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
+  useEffect(() => {
+    // Initialize allocation and vesting data for each category
+    const initialAllocation = {};
+    const initialVesting = {};
+
+    allocationCategories.forEach(category => {
+      initialAllocation[category] = 0;
+      initialVesting[category] = {
+        tgePercentage: 0,
+        cliffMonths: 0,
+        vestingMonths: 0
+      };
+    });
+
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      allocation: initialAllocation,
+      vesting: initialVesting
+    }));
+  }, [allocationCategories]);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
-  const handleAllocationChange = (category, value) => {
+  const handleTokenomicsChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      tokenomics: {
+        ...prev.tokenomics,
+        [name]: value
+      }
+    }));
+  };
+
+  const handleAllocationChange = (e) => {
+    const { value } = e.target;
     setFormData(prev => ({
       ...prev,
       allocation: {
         ...prev.allocation,
-        [category]: value
+        [selectedCategory]: Number(value)
       }
     }));
   };
 
-  const handleVestingChange = (category, field, value) => {
+  const handleVestingChange = (e) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       vesting: {
         ...prev.vesting,
-        [category]: {
-          ...prev.vesting[category],
-          [field]: value
+        [selectedCategory]: {
+          ...prev.vesting[selectedCategory],
+          [name]: Number(value)
         }
       }
     }));
   };
 
-  const handleAddCategory = () => {
-    setNewCategoryName('');
-    setOpenCategoryDialog(true);
-  };
-  
-  const handleCloseDialog = () => {
-    setOpenCategoryDialog(false);
-  };
-  
-  const handleAddCategoryConfirm = () => {
-    if (newCategoryName && !formData.allocation[newCategoryName]) {
-      setAllocationCategories([...allocationCategories, newCategoryName]);
-      setFormData(prev => ({
-        ...prev,
-        allocation: {
-          ...prev.allocation,
-          [newCategoryName]: 0
-        },
-        vesting: {
-          ...prev.vesting,
-          [newCategoryName]: {
-            tgePercentage: 10,
-            cliffMonths: 6,
-            vestingMonths: 12
-          }
-        }
-      }));
-    }
-    
-    handleCloseDialog();
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
   };
 
-  const handleRemoveCategory = (category) => {
-    const newCategories = allocationCategories.filter(c => c !== category);
-    setAllocationCategories(newCategories);
-    
-    const newAllocation = { ...formData.allocation };
-    delete newAllocation[category];
-    
-    const newVesting = { ...formData.vesting };
-    delete newVesting[category];
-    
-    setFormData(prev => ({
-      ...prev,
-      allocation: newAllocation,
-      vesting: newVesting
-    }));
+  const calculateTotalAllocation = () => {
+    return Object.values(formData.allocation).reduce((sum, value) => sum + Number(value), 0);
   };
 
   const handleSubmit = async (e) => {
@@ -143,17 +146,30 @@ const ProjectCreate = () => {
     setLoading(true);
 
     try {
-      // Validate total allocation
-      const totalAllocation = Object.values(formData.allocation).reduce((sum, value) => {
-        const numValue = Number(value);
-        return sum + (isNaN(numValue) ? 0 : numValue);
-      }, 0);
+      // Validate form data
+      if (!formData.name || !formData.description) {
+        throw new Error('Please fill in all required fields');
+      }
 
+      // Validate tokenomics data
+      const tokenomics = formData.tokenomics;
+      if (!tokenomics.totalSupply || !tokenomics.initialPrice || !tokenomics.maxSupply || !tokenomics.decimals) {
+        throw new Error('Please fill in all tokenomics fields');
+      }
+
+      // Validate allocation total
+      const totalAllocation = calculateTotalAllocation();
       if (Math.abs(totalAllocation - 100) > 0.01) {
         throw new Error(`Total allocation must be 100%. Current total: ${totalAllocation}%`);
       }
 
-      // Format project data
+      // Validate vesting data
+      for (const [category, vesting] of Object.entries(formData.vesting)) {
+        if (!vesting.tgePercentage || !vesting.cliffMonths || !vesting.vestingMonths) {
+          throw new Error(`Please fill in all vesting fields for ${category}`);
+        }
+      }
+
       const projectData = {
         name: formData.name,
         description: formData.description,
@@ -169,16 +185,17 @@ const ProjectCreate = () => {
         },
         vesting: formData.vesting
       };
-
-      console.log('Submitting project data:', projectData);
-
-      const response = await createProject(projectData);
-      console.log('Project created successfully:', response);
       
-      navigate('/projects');
+      console.log('Submitting project data:', projectData);
+      await createProject(projectData);
+      
+      // Add a small delay before navigating to ensure the project is saved
+      setTimeout(() => {
+        navigate('/projects');
+      }, 500);
     } catch (err) {
       console.error('Project creation error:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to create project');
+      setError(err.message || 'Failed to create project. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -240,375 +257,236 @@ const ProjectCreate = () => {
   };
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="lg">
+      <Box sx={{ my: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Create New Project
         </Typography>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <form onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  name="name"
-                  label="Project Name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  name="description"
-                  label="Project Description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="isPublic"
-                      checked={formData.isPublic}
-                      onChange={handleInputChange}
-                      color="primary"
-                    />
-                  }
-                  label="Public Project"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  name="tokenName"
-                  label="Token Name"
-                  value={formData.tokenName}
-                  onChange={handleInputChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  name="tokenSymbol"
-                  label="Token Symbol"
-                  value={formData.tokenSymbol}
-                  onChange={handleInputChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  name="tokenomics.totalSupply"
-                  label="Total Supply"
-                  value={formData.tokenomics.totalSupply}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData(prev => ({
-                      ...prev,
-                      tokenomics: {
-                        ...prev.tokenomics,
-                        totalSupply: value
-                      }
-                    }));
-                  }}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  name="tokenomics.initialPrice"
-                  label="Initial Price"
-                  value={formData.tokenomics.initialPrice}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData(prev => ({
-                      ...prev,
-                      tokenomics: {
-                        ...prev.tokenomics,
-                        initialPrice: value
-                      }
-                    }));
-                  }}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  name="tokenomics.maxSupply"
-                  label="Max Supply"
-                  value={formData.tokenomics.maxSupply}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData(prev => ({
-                      ...prev,
-                      tokenomics: {
-                        ...prev.tokenomics,
-                        maxSupply: value
-                      }
-                    }));
-                  }}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  name="tokenomics.decimals"
-                  label="Decimals"
-                  value={formData.tokenomics.decimals}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData(prev => ({
-                      ...prev,
-                      tokenomics: {
-                        ...prev.tokenomics,
-                        decimals: value
-                      }
-                    }));
-                  }}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6">Token Allocation (%)</Typography>
-                  <Button variant="outlined" onClick={handleAddCategory}>
-                    Add Category
-                  </Button>
-                </Box>
-                {allocationCategories.length === 0 ? (
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    Click "Add Category" to add token allocation categories
-                  </Alert>
-                ) : (
-                  <Grid container spacing={2}>
-                    {allocationCategories.map((category) => (
-                      <Grid item xs={12} sm={6} md={4} key={category}>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <TextField
-                            fullWidth
-                            type="number"
-                            name={`allocation.${category}`}
-                            label={category.charAt(0).toUpperCase() + category.slice(1)}
-                            value={formData.allocation[category]}
-                            onChange={(e) => handleAllocationChange(category, e.target.value)}
-                            required
-                          />
-                          <Button
-                            color="error"
-                            onClick={() => handleRemoveCategory(category)}
-                            sx={{ minWidth: 'auto' }}
-                          >
-                            X
-                          </Button>
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-                )}
-              </Grid>
-              <Grid item xs={12}>
-                <Box sx={{ mt: 4 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Vesting Schedule
-                  </Typography>
-                  {allocationCategories.length === 0 ? (
-                    <Alert severity="info">
-                      Add allocation categories to configure vesting schedules
-                    </Alert>
-                  ) : (
-                    <Grid container spacing={3}>
-                      {allocationCategories.map((category) => (
-                        <Grid item xs={12} key={category}>
-                          <Paper sx={{ p: 2 }}>
-                            <Typography variant="subtitle1" gutterBottom>
-                              {category.charAt(0).toUpperCase() + category.slice(1)} Vesting
-                            </Typography>
-                            <Grid container spacing={2}>
-                              <Grid item xs={12} sm={4}>
-                                <TextField
-                                  fullWidth
-                                  label="TGE Percentage"
-                                  type="number"
-                                  value={formData.vesting[category].tgePercentage}
-                                  onChange={(e) => handleVestingChange(category, 'tgePercentage', e.target.value)}
-                                  InputProps={{
-                                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                                  }}
-                                />
-                              </Grid>
-                              <Grid item xs={12} sm={4}>
-                                <TextField
-                                  fullWidth
-                                  label="Cliff Months"
-                                  type="number"
-                                  value={formData.vesting[category].cliffMonths}
-                                  onChange={(e) => handleVestingChange(category, 'cliffMonths', e.target.value)}
-                                  InputProps={{
-                                    endAdornment: <InputAdornment position="end">months</InputAdornment>,
-                                  }}
-                                />
-                              </Grid>
-                              <Grid item xs={12} sm={4}>
-                                <TextField
-                                  fullWidth
-                                  label="Vesting Months"
-                                  type="number"
-                                  value={formData.vesting[category].vestingMonths}
-                                  onChange={(e) => handleVestingChange(category, 'vestingMonths', e.target.value)}
-                                  InputProps={{
-                                    endAdornment: <InputAdornment position="end">months</InputAdornment>,
-                                  }}
-                                />
-                              </Grid>
-                            </Grid>
-                            
-                            {/* Vesting Schedule Preview */}
-                            <Box sx={{ mt: 2 }}>
-                              <Accordion>
-                                <AccordionSummary
-                                  expandIcon={<ExpandMoreIcon />}
-                                  aria-controls="panel1a-content"
-                                  id="panel1a-header"
-                                >
-                                  <Typography>Vesting Schedule Timeline</Typography>
-                                </AccordionSummary>
-                                <AccordionDetails>
-                                  <TableContainer component={Paper} variant="outlined">
-                                    <Table size="small">
-                                      <TableHead>
-                                        <TableRow>
-                                          <TableCell>Month</TableCell>
-                                          <TableCell align="right">Percentage</TableCell>
-                                          <TableCell align="right">Amount</TableCell>
-                                        </TableRow>
-                                      </TableHead>
-                                      <TableBody>
-                                        {calculateVestingSchedule(category).map((row) => (
-                                          <TableRow key={row.month}>
-                                            <TableCell>{row.monthDisplay}</TableCell>
-                                            <TableCell align="right">{row.percentage}%</TableCell>
-                                            <TableCell align="right">{row.amount.toLocaleString()}</TableCell>
-                                          </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
-                                  </TableContainer>
-                                </AccordionDetails>
-                              </Accordion>
-                            </Box>
-                          </Paper>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  )}
-                </Box>
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  fullWidth
-                  disabled={loading}
-                  onClick={(e) => {
-                    // Prevent default form submission
-                    e.preventDefault();
-                    // Call handleSubmit manually
-                    handleSubmit(e);
-                  }}
-                >
-                  {loading ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    'Create Project'
-                  )}
-                </Button>
-              </Grid>
+        <form onSubmit={handleSubmit}>
+          <Grid container spacing={3}>
+            {/* Basic Information */}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>
+                Basic Information
+              </Typography>
             </Grid>
-          </form>
-        </Paper>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                required
+                fullWidth
+                label="Project Name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                required
+                fullWidth
+                label="Token Name"
+                name="tokenName"
+                value={formData.tokenName}
+                onChange={handleInputChange}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                required
+                fullWidth
+                label="Token Symbol"
+                name="tokenSymbol"
+                value={formData.tokenSymbol}
+                onChange={handleInputChange}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                required
+                fullWidth
+                multiline
+                rows={4}
+                label="Project Description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.isPublic}
+                    onChange={handleInputChange}
+                    name="isPublic"
+                  />
+                }
+                label="Public Project"
+              />
+            </Grid>
+
+            {/* Tokenomics */}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>
+                Tokenomics
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                required
+                fullWidth
+                type="number"
+                label="Total Supply"
+                name="totalSupply"
+                value={formData.tokenomics.totalSupply}
+                onChange={handleTokenomicsChange}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                required
+                fullWidth
+                type="number"
+                label="Initial Price"
+                name="initialPrice"
+                value={formData.tokenomics.initialPrice}
+                onChange={handleTokenomicsChange}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                required
+                fullWidth
+                type="number"
+                label="Max Supply"
+                name="maxSupply"
+                value={formData.tokenomics.maxSupply}
+                onChange={handleTokenomicsChange}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                required
+                fullWidth
+                type="number"
+                label="Decimals"
+                name="decimals"
+                value={formData.tokenomics.decimals}
+                onChange={handleTokenomicsChange}
+              />
+            </Grid>
+
+            {/* Allocation */}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>
+                Token Allocation
+              </Typography>
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                Total Allocation: {calculateTotalAllocation()}%
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={selectedCategory}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
+                >
+                  {allocationCategories.map(category => (
+                    <MenuItem key={category} value={category}>
+                      {category}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                required
+                fullWidth
+                type="number"
+                label="Allocation Percentage"
+                value={formData.allocation[selectedCategory]}
+                onChange={handleAllocationChange}
+              />
+            </Grid>
+
+            {/* Vesting */}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>
+                Vesting Schedule - {selectedCategory}
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <TextField
+                required
+                fullWidth
+                type="number"
+                label="TGE Percentage"
+                name="tgePercentage"
+                value={formData.vesting[selectedCategory]?.tgePercentage}
+                onChange={handleVestingChange}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <TextField
+                required
+                fullWidth
+                type="number"
+                label="Cliff Months"
+                name="cliffMonths"
+                value={formData.vesting[selectedCategory]?.cliffMonths}
+                onChange={handleVestingChange}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <TextField
+                required
+                fullWidth
+                type="number"
+                label="Vesting Months"
+                name="vestingMonths"
+                value={formData.vesting[selectedCategory]?.vestingMonths}
+                onChange={handleVestingChange}
+              />
+            </Grid>
+
+            {/* Submit Button */}
+            <Grid item xs={12}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={loading}
+                fullWidth
+              >
+                {loading ? 'Creating Project...' : 'Create Project'}
+              </Button>
+            </Grid>
+
+            {error && (
+              <Grid item xs={12}>
+                <Alert severity="error">{error}</Alert>
+              </Grid>
+            )}
+          </Grid>
+        </form>
       </Box>
-      
-      {/* Add Category Dialog */}
-      <Dialog 
-        open={openCategoryDialog} 
-        onClose={handleCloseDialog}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: 3,
-            width: '100%',
-            maxWidth: '500px'
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 1 }}>
-          <Typography variant="h6" component="div">
-            Add Token Category
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Enter a name for the new token allocation category
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            margin="dense"
-            label="Category Name"
-            type="text"
-            variant="outlined"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleAddCategoryConfirm();
-              }
-            }}
-            sx={{ mt: 1 }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
-            onClick={handleCloseDialog} 
-            color="primary"
-            variant="outlined"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleAddCategoryConfirm} 
-            color="primary"
-            variant="contained"
-            disabled={!newCategoryName.trim()}
-          >
-            Add Category
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };
