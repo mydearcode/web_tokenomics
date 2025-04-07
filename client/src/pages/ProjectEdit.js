@@ -56,17 +56,8 @@ const ProjectEdit = () => {
     vesting: {}
   });
 
-  const [allocationCategories, setAllocationCategories] = useState([
-    'Team',
-    'Advisors',
-    'Marketing',
-    'Development',
-    'Community',
-    'Reserve',
-    'Liquidity'
-  ]);
-
-  const [selectedCategory, setSelectedCategory] = useState('Team');
+  const [allocationCategories, setAllocationCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
 
@@ -97,8 +88,13 @@ const ProjectEdit = () => {
         }
         
         // Update allocation categories from existing data
-        const existingCategories = Object.keys(projectData.tokenomics?.allocation || {});
-        setAllocationCategories(prev => Array.from(new Set([...prev, ...existingCategories])));
+        const existingCategories = Object.keys(projectData.tokenomics?.allocation || {}).map(
+          category => category.charAt(0).toUpperCase() + category.slice(1)
+        );
+        setAllocationCategories(existingCategories);
+        if (existingCategories.length > 0) {
+          setSelectedCategory(existingCategories[0]);
+        }
         
         // Transform project data to form data
         const transformedData = {
@@ -195,8 +191,33 @@ const ProjectEdit = () => {
 
   const handleAddCategory = () => {
     if (newCategory && !allocationCategories.includes(newCategory)) {
-      setAllocationCategories(prev => [...prev, newCategory]);
-      setSelectedCategory(newCategory);
+      const formattedCategory = newCategory.trim();
+      setAllocationCategories(prev => [...prev, formattedCategory]);
+      setSelectedCategory(formattedCategory);
+      
+      // Initialize allocation and vesting data for new category
+      setFormData(prev => ({
+        ...prev,
+        tokenomics: {
+          ...prev.tokenomics,
+          allocation: {
+            ...prev.tokenomics.allocation,
+            [formattedCategory.toLowerCase()]: {
+              percentage: 0,
+              amount: 0
+            }
+          }
+        },
+        vesting: {
+          ...prev.vesting,
+          [formattedCategory.toLowerCase()]: {
+            tgePercentage: 0,
+            cliffMonths: 0,
+            vestingMonths: 0
+          }
+        }
+      }));
+      
       setNewCategory('');
       setShowAddCategory(false);
     }

@@ -56,17 +56,8 @@ const ProjectCreate = () => {
     vesting: {}
   });
 
-  const [allocationCategories, setAllocationCategories] = useState([
-    'Team',
-    'Advisors',
-    'Marketing',
-    'Development',
-    'Community',
-    'Reserve',
-    'Liquidity'
-  ]);
-
-  const [selectedCategory, setSelectedCategory] = useState('Team');
+  const [allocationCategories, setAllocationCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
 
@@ -157,8 +148,33 @@ const ProjectCreate = () => {
 
   const handleAddCategory = () => {
     if (newCategory && !allocationCategories.includes(newCategory)) {
-      setAllocationCategories(prev => [...prev, newCategory]);
-      setSelectedCategory(newCategory);
+      const formattedCategory = newCategory.trim();
+      setAllocationCategories(prev => [...prev, formattedCategory]);
+      setSelectedCategory(formattedCategory);
+      
+      // Initialize allocation and vesting data for new category
+      setFormData(prev => ({
+        ...prev,
+        tokenomics: {
+          ...prev.tokenomics,
+          allocation: {
+            ...prev.tokenomics.allocation,
+            [formattedCategory.toLowerCase()]: {
+              percentage: 0,
+              amount: 0
+            }
+          }
+        },
+        vesting: {
+          ...prev.vesting,
+          [formattedCategory.toLowerCase()]: {
+            tgePercentage: 0,
+            cliffMonths: 0,
+            vestingMonths: 0
+          }
+        }
+      }));
+      
       setNewCategory('');
       setShowAddCategory(false);
     }
@@ -193,16 +209,23 @@ const ProjectCreate = () => {
         throw new Error(`Total allocation must be 100%. Current total: ${totalAllocation}%`);
       }
 
-      // Validate vesting data
-      for (const [category, vesting] of Object.entries(formData.vesting)) {
-        if (formData.tokenomics.allocation[category]?.percentage > 0) {
-          if (!vesting.tgePercentage && !vesting.cliffMonths && !vesting.vestingMonths) {
-            throw new Error(`Please fill in vesting details for ${category}`);
-          }
-        }
-      }
+      const projectData = {
+        name: formData.name,
+        description: formData.description,
+        isPublic: formData.isPublic,
+        tokenomics: {
+          name: tokenomics.name,
+          symbol: tokenomics.symbol,
+          totalSupply: Number(tokenomics.totalSupply),
+          initialPrice: Number(tokenomics.initialPrice),
+          maxSupply: Number(tokenomics.maxSupply),
+          decimals: Number(tokenomics.decimals),
+          allocation: formData.tokenomics.allocation
+        },
+        vesting: formData.vesting
+      };
 
-      const response = await createProject(formData);
+      const response = await createProject(projectData);
       navigate(`/projects/${response.data._id}`);
     } catch (err) {
       console.error('Project creation error:', err);
