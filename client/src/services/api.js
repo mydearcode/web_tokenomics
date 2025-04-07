@@ -178,9 +178,9 @@ export const createProject = async (projectData) => {
       name: projectData.name,
       description: projectData.description,
       isPublic: projectData.isPublic,
-      tokenName: projectData.tokenName,
-      tokenSymbol: projectData.tokenSymbol,
       tokenomics: {
+        name: projectData.tokenomics.name,
+        symbol: projectData.tokenomics.symbol,
         totalSupply: Number(projectData.tokenomics.totalSupply),
         initialPrice: Number(projectData.tokenomics.initialPrice),
         maxSupply: Number(projectData.tokenomics.maxSupply),
@@ -192,21 +192,10 @@ export const createProject = async (projectData) => {
 
     console.log('Formatted project data:', formattedData);
 
-    const response = await api.post('/api/projects', formattedData, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': formattedToken
-      }
-    });
-
-    return response.data;
+    const response = await api.post('/api/projects', formattedData);
+    return response;
   } catch (error) {
     console.error('Error creating project:', error);
-    if (error.response?.status === 401) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
     throw error;
   }
 };

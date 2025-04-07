@@ -63,33 +63,6 @@ const ProjectCreate = () => {
   const [vestingSchedule, setVestingSchedule] = useState([]);
 
   useEffect(() => {
-    // Initialize allocation and vesting data for each category
-    const initialAllocation = {};
-    const initialVesting = {};
-
-    allocationCategories.forEach(category => {
-      initialAllocation[category.toLowerCase()] = {
-        percentage: 0,
-        amount: 0
-      };
-      initialVesting[category.toLowerCase()] = {
-        tgePercentage: 0,
-        cliffMonths: 0,
-        vestingMonths: 0
-      };
-    });
-
-    setFormData(prev => ({
-      ...prev,
-      tokenomics: {
-        ...prev.tokenomics,
-        allocation: initialAllocation
-      },
-      vesting: initialVesting
-    }));
-  }, [allocationCategories]);
-
-  useEffect(() => {
     const schedule = [];
     const totalSupply = Number(formData.tokenomics.totalSupply) || 0;
 
@@ -99,40 +72,56 @@ const ProjectCreate = () => {
       const tgeAmount = (vesting.tgePercentage / 100) * totalTokens;
       const remainingTokens = totalTokens - tgeAmount;
       
-      if (vesting.vestingMonths > 0) {
-        const monthlyAmount = remainingTokens / vesting.vestingMonths;
-        let currentAmount = tgeAmount;
-
-        for (let month = 0; month <= vesting.vestingMonths + vesting.cliffMonths; month++) {
-          if (month === 0 && tgeAmount > 0) {
-            schedule.push({
-              month,
-              category,
-              amount: tgeAmount,
-              totalAmount: currentAmount
-            });
-          } else if (month > vesting.cliffMonths) {
-            currentAmount += monthlyAmount;
-            schedule.push({
-              month,
-              category,
-              amount: monthlyAmount,
-              totalAmount: currentAmount
-            });
-          }
-        }
-      } else if (tgeAmount > 0) {
+      if (vesting.vestingMonths > 0 || tgeAmount > 0) {
         schedule.push({
-          month: 0,
           category,
-          amount: tgeAmount,
-          totalAmount: tgeAmount
+          allocation: allocation.percentage,
+          tge: vesting.tgePercentage,
+          cliff: vesting.cliffMonths,
+          vesting: vesting.vestingMonths,
+          schedule: calculateSchedule(totalTokens, vesting)
         });
       }
     });
 
     setVestingSchedule(schedule);
   }, [formData.tokenomics.allocation, formData.vesting, formData.tokenomics.totalSupply]);
+
+  const calculateSchedule = (totalTokens, vesting) => {
+    const schedule = [];
+    const tgeAmount = (vesting.tgePercentage / 100) * totalTokens;
+    const remainingTokens = totalTokens - tgeAmount;
+    
+    if (vesting.vestingMonths > 0) {
+      const monthlyAmount = remainingTokens / vesting.vestingMonths;
+      let currentAmount = tgeAmount;
+
+      for (let month = 0; month <= vesting.vestingMonths + vesting.cliffMonths; month++) {
+        if (month === 0 && tgeAmount > 0) {
+          schedule.push({
+            month,
+            amount: tgeAmount,
+            totalAmount: currentAmount
+          });
+        } else if (month > vesting.cliffMonths) {
+          currentAmount += monthlyAmount;
+          schedule.push({
+            month,
+            amount: monthlyAmount,
+            totalAmount: currentAmount
+          });
+        }
+      }
+    } else if (tgeAmount > 0) {
+      schedule.push({
+        month: 0,
+        amount: tgeAmount,
+        totalAmount: tgeAmount
+      });
+    }
+    
+    return schedule;
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -201,11 +190,13 @@ const ProjectCreate = () => {
   const handleAddCategory = () => {
     if (newCategory && !allocationCategories.includes(newCategory)) {
       const formattedCategory = newCategory.trim();
+      const categoryKey = formattedCategory.toLowerCase();
+      
+      // Keep existing allocation and vesting data
       setAllocationCategories(prev => [...prev, formattedCategory]);
       setSelectedCategory(formattedCategory);
       
-      // Initialize allocation and vesting data for new category
-      const categoryKey = formattedCategory.toLowerCase();
+      // Only initialize the new category
       setFormData(prev => ({
         ...prev,
         tokenomics: {
@@ -274,19 +265,23 @@ const ProjectCreate = () => {
           maxSupply: Number(tokenomics.maxSupply),
           decimals: Number(tokenomics.decimals),
           allocation: Object.entries(formData.tokenomics.allocation).reduce((acc, [key, value]) => {
-            acc[key] = {
-              percentage: Number(value.percentage),
-              amount: Number(value.amount)
-            };
+            if (value.percentage > 0) {
+              acc[key] = {
+                percentage: Number(value.percentage),
+                amount: Number(value.amount)
+              };
+            }
             return acc;
           }, {})
         },
         vesting: Object.entries(formData.vesting).reduce((acc, [key, value]) => {
-          acc[key] = {
-            tgePercentage: Number(value.tgePercentage),
-            cliffMonths: Number(value.cliffMonths),
-            vestingMonths: Number(value.vestingMonths)
-          };
+          if (formData.tokenomics.allocation[key]?.percentage > 0) {
+            acc[key] = {
+              tgePercentage: Number(value.tgePercentage),
+              cliffMonths: Number(value.cliffMonths),
+              vestingMonths: Number(value.vestingMonths)
+            };
+          }
           return acc;
         }, {})
       };
@@ -573,39 +568,46 @@ const ProjectCreate = () => {
 
           {vestingSchedule.length > 0 && (
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Accordion>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="h6">Vesting Schedule Preview</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <TableContainer>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Month</TableCell>
-                          <TableCell>Category</TableCell>
-                          <TableCell align="right">Amount</TableCell>
-                          <TableCell align="right">Total Amount</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {vestingSchedule.map((item, index) => (
-                          <TableRow key={`${item.category}-${item.month}-${index}`}>
-                            <TableCell>{item.month}</TableCell>
-                            <TableCell>{item.category.charAt(0).toUpperCase() + item.category.slice(1)}</TableCell>
-                            <TableCell align="right">
-                              {item.amount.toLocaleString()}
-                            </TableCell>
-                            <TableCell align="right">
-                              {item.totalAmount.toLocaleString()}
-                            </TableCell>
+              <Typography variant="h6" gutterBottom>
+                Vesting Schedule Preview
+              </Typography>
+              {vestingSchedule.map((categoryData, index) => (
+                <Accordion key={categoryData.category}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography>
+                      {categoryData.category.charAt(0).toUpperCase() + categoryData.category.slice(1)} 
+                      ({categoryData.allocation}% - TGE: {categoryData.tge}% - 
+                      Cliff: {categoryData.cliff} months - Vesting: {categoryData.vesting} months)
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Month</TableCell>
+                            <TableCell align="right">Amount</TableCell>
+                            <TableCell align="right">Total Amount</TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </AccordionDetails>
-              </Accordion>
+                        </TableHead>
+                        <TableBody>
+                          {categoryData.schedule.map((item, scheduleIndex) => (
+                            <TableRow key={`${categoryData.category}-${item.month}-${scheduleIndex}`}>
+                              <TableCell>{item.month}</TableCell>
+                              <TableCell align="right">
+                                {item.amount.toLocaleString()}
+                              </TableCell>
+                              <TableCell align="right">
+                                {item.totalAmount.toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
             </Paper>
           )}
 
