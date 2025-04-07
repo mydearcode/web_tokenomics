@@ -60,6 +60,7 @@ const ProjectCreate = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
+  const [vestingSchedule, setVestingSchedule] = useState([]);
 
   useEffect(() => {
     // Initialize allocation and vesting data for each category
@@ -88,6 +89,51 @@ const ProjectCreate = () => {
     }));
   }, [allocationCategories]);
 
+  useEffect(() => {
+    const schedule = [];
+    const totalSupply = Number(formData.tokenomics.totalSupply) || 0;
+
+    Object.entries(formData.tokenomics.allocation).forEach(([category, allocation]) => {
+      const vesting = formData.vesting[category] || { tgePercentage: 0, cliffMonths: 0, vestingMonths: 0 };
+      const totalTokens = (allocation.percentage / 100) * totalSupply;
+      const tgeAmount = (vesting.tgePercentage / 100) * totalTokens;
+      const remainingTokens = totalTokens - tgeAmount;
+      
+      if (vesting.vestingMonths > 0) {
+        const monthlyAmount = remainingTokens / vesting.vestingMonths;
+        let currentAmount = tgeAmount;
+
+        for (let month = 0; month <= vesting.vestingMonths + vesting.cliffMonths; month++) {
+          if (month === 0 && tgeAmount > 0) {
+            schedule.push({
+              month,
+              category,
+              amount: tgeAmount,
+              totalAmount: currentAmount
+            });
+          } else if (month > vesting.cliffMonths) {
+            currentAmount += monthlyAmount;
+            schedule.push({
+              month,
+              category,
+              amount: monthlyAmount,
+              totalAmount: currentAmount
+            });
+          }
+        }
+      } else if (tgeAmount > 0) {
+        schedule.push({
+          month: 0,
+          category,
+          amount: tgeAmount,
+          totalAmount: tgeAmount
+        });
+      }
+    });
+
+    setVestingSchedule(schedule);
+  }, [formData.tokenomics.allocation, formData.vesting, formData.tokenomics.totalSupply]);
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -107,36 +153,41 @@ const ProjectCreate = () => {
     }));
   };
 
-  const handleAllocationChange = (e) => {
-    const { value } = e.target;
+  const handleAllocationChange = (value) => {
+    if (!selectedCategory) return;
+    
+    const categoryKey = selectedCategory.toLowerCase();
+    const numValue = Number(value) || 0;
     const totalSupply = Number(formData.tokenomics.totalSupply) || 0;
-    const percentage = Number(value);
-    const amount = (totalSupply * percentage) / 100;
-
+    
     setFormData(prev => ({
       ...prev,
       tokenomics: {
         ...prev.tokenomics,
         allocation: {
           ...prev.tokenomics.allocation,
-          [selectedCategory.toLowerCase()]: {
-            percentage,
-            amount
+          [categoryKey]: {
+            percentage: numValue,
+            amount: (numValue / 100) * totalSupply
           }
         }
       }
     }));
   };
 
-  const handleVestingChange = (e) => {
-    const { name, value } = e.target;
+  const handleVestingChange = (field, value) => {
+    if (!selectedCategory) return;
+    
+    const categoryKey = selectedCategory.toLowerCase();
+    const numValue = Number(value) || 0;
+    
     setFormData(prev => ({
       ...prev,
       vesting: {
         ...prev.vesting,
-        [selectedCategory.toLowerCase()]: {
-          ...prev.vesting[selectedCategory.toLowerCase()],
-          [name]: Number(value)
+        [categoryKey]: {
+          ...prev.vesting[categoryKey],
+          [field]: numValue
         }
       }
     }));
@@ -153,13 +204,14 @@ const ProjectCreate = () => {
       setSelectedCategory(formattedCategory);
       
       // Initialize allocation and vesting data for new category
+      const categoryKey = formattedCategory.toLowerCase();
       setFormData(prev => ({
         ...prev,
         tokenomics: {
           ...prev.tokenomics,
           allocation: {
             ...prev.tokenomics.allocation,
-            [formattedCategory.toLowerCase()]: {
+            [categoryKey]: {
               percentage: 0,
               amount: 0
             }
@@ -167,7 +219,7 @@ const ProjectCreate = () => {
         },
         vesting: {
           ...prev.vesting,
-          [formattedCategory.toLowerCase()]: {
+          [categoryKey]: {
             tgePercentage: 0,
             cliffMonths: 0,
             vestingMonths: 0
@@ -220,11 +272,25 @@ const ProjectCreate = () => {
           initialPrice: Number(tokenomics.initialPrice),
           maxSupply: Number(tokenomics.maxSupply),
           decimals: Number(tokenomics.decimals),
-          allocation: formData.tokenomics.allocation
+          allocation: Object.entries(formData.tokenomics.allocation).reduce((acc, [key, value]) => {
+            acc[key] = {
+              percentage: Number(value.percentage),
+              amount: Number(value.amount)
+            };
+            return acc;
+          }, {})
         },
-        vesting: formData.vesting
+        vesting: Object.entries(formData.vesting).reduce((acc, [key, value]) => {
+          acc[key] = {
+            tgePercentage: Number(value.tgePercentage),
+            cliffMonths: Number(value.cliffMonths),
+            vestingMonths: Number(value.vestingMonths)
+          };
+          return acc;
+        }, {})
       };
 
+      console.log('Submitting project data:', projectData);
       const response = await createProject(projectData);
       navigate(`/projects/${response.data._id}`);
     } catch (err) {
@@ -428,7 +494,7 @@ const ProjectCreate = () => {
                     label="TGE Percentage"
                     name="tgePercentage"
                     value={formData.vesting[selectedCategory.toLowerCase()]?.tgePercentage || 0}
-                    onChange={handleVestingChange}
+                    onChange={(e) => handleVestingChange('tgePercentage', e.target.value)}
                     sx={{ mb: 2 }}
                     InputProps={{
                       endAdornment: <InputAdornment position="end">%</InputAdornment>,
@@ -441,7 +507,7 @@ const ProjectCreate = () => {
                     label="Cliff (months)"
                     name="cliffMonths"
                     value={formData.vesting[selectedCategory.toLowerCase()]?.cliffMonths || 0}
-                    onChange={handleVestingChange}
+                    onChange={(e) => handleVestingChange('cliffMonths', e.target.value)}
                     sx={{ mb: 2 }}
                     InputProps={{
                       inputProps: { min: 0 }
@@ -453,7 +519,7 @@ const ProjectCreate = () => {
                     label="Vesting Period (months)"
                     name="vestingMonths"
                     value={formData.vesting[selectedCategory.toLowerCase()]?.vestingMonths || 0}
-                    onChange={handleVestingChange}
+                    onChange={(e) => handleVestingChange('vestingMonths', e.target.value)}
                     InputProps={{
                       inputProps: { min: 0 }
                     }}
@@ -503,6 +569,40 @@ const ProjectCreate = () => {
               </Grid>
             </Grid>
           </Paper>
+
+          {vestingSchedule.length > 0 && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Vesting Schedule Preview
+              </Typography>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Month</TableCell>
+                      <TableCell>Category</TableCell>
+                      <TableCell align="right">Amount</TableCell>
+                      <TableCell align="right">Total Amount</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {vestingSchedule.map((item, index) => (
+                      <TableRow key={`${item.category}-${item.month}-${index}`}>
+                        <TableCell>{item.month}</TableCell>
+                        <TableCell>{item.category}</TableCell>
+                        <TableCell align="right">
+                          {item.amount.toLocaleString()}
+                        </TableCell>
+                        <TableCell align="right">
+                          {item.totalAmount.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          )}
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
             <Button
