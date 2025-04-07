@@ -155,8 +155,8 @@ ProjectSchema.pre('findOneAndUpdate', function(next) {
   next();
 });
 
-// Add remove method
-ProjectSchema.methods.remove = async function() {
+// Add deleteProject method
+ProjectSchema.methods.deleteProject = async function() {
   return this.deleteOne();
 };
 

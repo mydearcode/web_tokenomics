@@ -172,25 +172,25 @@ const ProjectDetails = () => {
                   <Grid item xs={6}>
                     <Typography variant="body2" color="text.secondary">Total Supply</Typography>
                     <Typography variant="body1" sx={{ color: 'text.primary' }}>
-                      {project.totalSupply.toLocaleString()}
+                      {project.tokenomics?.totalSupply?.toLocaleString() || '0'}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="body2" color="text.secondary">Initial Price</Typography>
                     <Typography variant="body1" sx={{ color: 'text.primary' }}>
-                      ${project.initialPrice}
+                      ${project.tokenomics?.initialPrice?.toLocaleString() || '0'}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="body2" color="text.secondary">Max Supply</Typography>
                     <Typography variant="body1" sx={{ color: 'text.primary' }}>
-                      {project.maxSupply.toLocaleString()}
+                      {project.tokenomics?.maxSupply?.toLocaleString() || '0'}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="body2" color="text.secondary">Decimals</Typography>
                     <Typography variant="body1" sx={{ color: 'text.primary' }}>
-                      {project.decimals}
+                      {project.tokenomics?.decimals || '0'}
                     </Typography>
                   </Grid>
                 </Grid>
