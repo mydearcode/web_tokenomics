@@ -1,13 +1,47 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, useTheme } from '@mui/material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+const COLORS = [
+  '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', 
+  '#82CA9D', '#FFC658', '#FF7C43', '#A4DE6C', '#D0ED57'
+];
 
 const AllocationChart = ({ data }) => {
+  const theme = useTheme();
+
+  if (!data || data.length === 0) {
+    return (
+      <Box sx={{ p: 2, textAlign: 'center' }}>
+        <Typography>No allocation data available</Typography>
+      </Box>
+    );
+  }
+
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      return (
+        <Box sx={{
+          background: 'rgba(0, 0, 0, 0.8)',
+          padding: '12px',
+          borderRadius: '4px',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>
+            {payload[0].name}
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'white' }}>
+            {payload[0].value}%
+          </Typography>
+        </Box>
+      );
+    }
+    return null;
+  };
+
   return (
-    <Box sx={{ height: 400 }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <Box sx={{ width: '100%', height: '100%' }}>
+      <ResponsiveContainer>
         <PieChart>
           <Pie
             data={data}
@@ -18,13 +52,28 @@ const AllocationChart = ({ data }) => {
             outerRadius={150}
             fill="#8884d8"
             dataKey="value"
+            animationBegin={0}
+            animationDuration={1500}
           >
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              <Cell 
+                key={`cell-${index}`} 
+                fill={COLORS[index % COLORS.length]}
+                stroke={theme.palette.background.paper}
+                strokeWidth={2}
+              />
             ))}
           </Pie>
-          <Tooltip formatter={(value) => `${value}%`} />
-          <Legend />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend 
+            verticalAlign="bottom" 
+            height={36}
+            formatter={(value) => (
+              <Typography variant="body2" sx={{ color: 'white' }}>
+                {value}
+              </Typography>
+            )}
+          />
         </PieChart>
       </ResponsiveContainer>
     </Box>

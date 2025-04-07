@@ -1,155 +1,93 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  Typography,
-  Grid,
-  Box,
-  Button,
+import { 
+  Box, 
+  Container, 
+  Typography, 
+  Grid, 
+  Paper, 
   CircularProgress,
-  Alert,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tabs,
-  Tab
+  useTheme,
+  alpha
 } from '@mui/material';
-import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Public as PublicIcon,
-  Lock as LockIcon,
-  Share as ShareIcon,
-} from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
-import { getProject, deleteProject } from '../services/api';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
-import ShareProject from '../components/ShareProject';
+import { getProject } from '../services/api';
 import AllocationChart from '../components/AllocationChart';
 import VestingChart from '../components/VestingChart';
 import ProjectActions from '../components/ProjectActions';
 
-// Renk paleti
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C43', '#A4DE6C', '#D0ED57'];
-
 const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const theme = useTheme();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [projectAccess, setProjectAccess] = useState('none');
   const [allocationCategories, setAllocationCategories] = useState([]);
   const [vestingSchedules, setVestingSchedules] = useState([]);
-  const [selectedVestingCategory, setSelectedVestingCategory] = useState('');
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        setLoading(true);
-        const projectData = await getProject(id);
-        
-        if (!projectData) {
+        const data = await getProject(id);
+        if (!data) {
           setError('Project not found');
           return;
         }
-
-        setProject(projectData);
+        setProject(data);
         
-        // Determine project access
-        if (projectData.owner._id === user?._id) {
-          setProjectAccess('owner');
-        } else if (projectData.collaborators?.some(c => c.user._id === user?._id)) {
-          setProjectAccess('collaborator');
-        } else if (projectData.isPublic) {
-          setProjectAccess('public');
-        }
+        // Prepare allocation data for the pie chart
+        const allocationData = Object.entries(data.tokenomics).map(([category, percentage]) => ({
+          name: category,
+          value: percentage
+        }));
+        setAllocationCategories(allocationData);
 
         // Calculate vesting schedules
-        if (projectData.tokenomics && projectData.vesting) {
-          const schedules = calculateVestingSchedule(projectData);
-          setVestingSchedules(schedules);
-        }
-
-        // Prepare allocation data for visualization
-        if (projectData.tokenomics?.allocation) {
-          const categories = prepareAllocationData(projectData.tokenomics.allocation);
-          setAllocationCategories(categories);
-        }
+        const schedules = calculateVestingSchedule(data);
+        setVestingSchedules(schedules);
       } catch (err) {
-        console.error('Error fetching project:', err);
-        setError(err.response?.data?.message || 'Failed to fetch project details');
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProject();
-  }, [id, user]);
-
-  const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this project?')) {
-      try {
-        await deleteProject(id);
-        navigate('/');
-      } catch (err) {
-        setError('Failed to delete project');
-      }
-    }
-  };
+  }, [id]);
 
   const calculateVestingSchedule = (projectData) => {
-    const schedules = [];
-    const { totalSupply } = projectData.tokenomics;
-    const allocation = projectData.tokenomics.allocation;
-    const vesting = projectData.vesting;
+    if (!projectData.tokenomics || !projectData.vesting) return [];
 
-    Object.entries(allocation).forEach(([category, percentage]) => {
-      const vestingData = vesting[category];
-      if (vestingData) {
-        const totalTokens = (totalSupply * percentage) / 100;
-        const tgeAmount = (totalTokens * vestingData.tgePercentage) / 100;
-        const remainingTokens = totalTokens - tgeAmount;
-        const monthlyVesting = remainingTokens / vestingData.vestingMonths;
+    return Object.entries(projectData.tokenomics).map(([category, percentage]) => {
+      const vestingData = projectData.vesting[category];
+      if (!vestingData) return null;
 
-        const schedule = {
-          category,
-          totalTokens,
-          tgeAmount,
-          remainingTokens,
-          monthlyVesting,
-          cliffMonths: vestingData.cliffMonths,
-          vestingMonths: vestingData.vestingMonths
-        };
+      const totalTokens = (projectData.totalSupply * percentage) / 100;
+      const tgeAmount = (totalTokens * vestingData.tgePercentage) / 100;
+      const remainingTokens = totalTokens - tgeAmount;
+      const monthlyVesting = remainingTokens / vestingData.vestingMonths;
 
-        schedules.push(schedule);
-      }
-    });
-
-    return schedules;
-  };
-
-  const prepareAllocationData = (allocation) => {
-    return Object.entries(allocation).map(([category, percentage]) => ({
-      name: category,
-      value: percentage
-    }));
-  };
-
-  const handleShareProject = () => {
-    setShareDialogOpen(true);
+      return {
+        category,
+        totalTokens,
+        tgeAmount,
+        remainingTokens,
+        monthlyVesting,
+        cliffMonths: vestingData.cliffMonths,
+        vestingMonths: vestingData.vestingMonths
+      };
+    }).filter(Boolean);
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        background: `linear-gradient(45deg, ${theme.palette.background.default} 0%, ${alpha(theme.palette.primary.main, 0.1)} 100%)`
+      }}>
         <CircularProgress />
       </Box>
     );
@@ -157,89 +95,124 @@ const ProjectDetails = () => {
 
   if (error) {
     return (
-      <Box p={3}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
-
-  if (!project) {
-    return (
-      <Box p={3}>
-        <Alert severity="info">Project not found</Alert>
+      <Box sx={{ 
+        p: 4, 
+        textAlign: 'center',
+        background: `linear-gradient(45deg, ${theme.palette.background.default} 0%, ${alpha(theme.palette.error.main, 0.1)} 100%)`
+      }}>
+        <Typography variant="h5" color="error" gutterBottom>
+          Error
+        </Typography>
+        <Typography>{error}</Typography>
       </Box>
     );
   }
 
   return (
-    <Box p={3}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>
-              {project.name}
-            </Typography>
-            <Typography variant="subtitle1" color="textSecondary" gutterBottom>
-              {project.description}
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Created by {project.owner.name} on {new Date(project.createdAt).toLocaleDateString()}
-            </Typography>
-          </Paper>
-        </Grid>
+    <Box sx={{ 
+      minHeight: '100vh',
+      background: `linear-gradient(45deg, ${theme.palette.background.default} 0%, ${alpha(theme.palette.primary.main, 0.1)} 100%)`,
+      py: 4
+    }}>
+      <Container maxWidth="lg">
+        <Paper sx={{ 
+          p: 4, 
+          mb: 4,
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: 2
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+            <Box>
+              <Typography variant="h4" gutterBottom sx={{ 
+                fontWeight: 'bold',
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>
+                {project.name}
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                {project.description}
+              </Typography>
+            </Box>
+            <ProjectActions project={project} />
+          </Box>
 
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Token Information
-            </Typography>
-            <Typography>
-              Name: {project.tokenName}
-            </Typography>
-            <Typography>
-              Symbol: {project.tokenSymbol}
-            </Typography>
-            <Typography>
-              Total Supply: {project.tokenomics?.totalSupply?.toLocaleString() || '0'}
-            </Typography>
-            <Typography>
-              Initial Price: ${project.tokenomics?.initialPrice?.toLocaleString() || '0'}
-            </Typography>
-            <Typography>
-              Max Supply: {project.tokenomics?.maxSupply?.toLocaleString() || '0'}
-            </Typography>
-            <Typography>
-              Decimals: {project.tokenomics?.decimals || '0'}
-            </Typography>
-          </Paper>
-        </Grid>
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ 
+                p: 3, 
+                height: '100%',
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: 2
+              }}>
+                <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
+                  Token Allocation
+                </Typography>
+                <Box sx={{ height: 400 }}>
+                  <AllocationChart data={allocationCategories} />
+                </Box>
+              </Paper>
+            </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Allocation
-            </Typography>
-            <AllocationChart data={allocationCategories} />
-          </Paper>
-        </Grid>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ 
+                p: 3, 
+                height: '100%',
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: 2
+              }}>
+                <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
+                  Token Information
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">Total Supply</Typography>
+                    <Typography variant="body1" sx={{ color: 'text.primary' }}>
+                      {project.totalSupply.toLocaleString()}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">Initial Price</Typography>
+                    <Typography variant="body1" sx={{ color: 'text.primary' }}>
+                      ${project.initialPrice}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">Max Supply</Typography>
+                    <Typography variant="body1" sx={{ color: 'text.primary' }}>
+                      {project.maxSupply.toLocaleString()}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">Decimals</Typography>
+                    <Typography variant="body1" sx={{ color: 'text.primary' }}>
+                      {project.decimals}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
 
-        <Grid item xs={12}>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Vesting Schedule
-            </Typography>
-            <VestingChart schedules={vestingSchedules} />
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12}>
-          <ProjectActions
-            project={project}
-            access={projectAccess}
-            onEdit={() => navigate(`/projects/${id}/edit`)}
-          />
-        </Grid>
-      </Grid>
+            <Grid item xs={12}>
+              <Paper sx={{ 
+                p: 3,
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: 2
+              }}>
+                <Typography variant="h6" gutterBottom sx={{ color: 'text.primary' }}>
+                  Vesting Schedule
+                </Typography>
+                <VestingChart schedules={vestingSchedules} />
+              </Paper>
+            </Grid>
+          </Grid>
+        </Paper>
+      </Container>
     </Box>
   );
 };
