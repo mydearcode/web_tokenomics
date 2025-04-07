@@ -200,16 +200,16 @@ const ProjectDetails = () => {
               Symbol: {project.tokenSymbol}
             </Typography>
             <Typography>
-              Total Supply: {project.tokenomics.totalSupply.toLocaleString()}
+              Total Supply: {project.tokenomics?.totalSupply?.toLocaleString() || '0'}
             </Typography>
             <Typography>
-              Initial Price: ${project.tokenomics.initialPrice.toLocaleString()}
+              Initial Price: ${project.tokenomics?.initialPrice?.toLocaleString() || '0'}
             </Typography>
             <Typography>
-              Max Supply: {project.tokenomics.maxSupply.toLocaleString()}
+              Max Supply: {project.tokenomics?.maxSupply?.toLocaleString() || '0'}
             </Typography>
             <Typography>
-              Decimals: {project.tokenomics.decimals}
+              Decimals: {project.tokenomics?.decimals || '0'}
             </Typography>
           </Paper>
         </Grid>
