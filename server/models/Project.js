@@ -59,12 +59,25 @@ const ProjectSchema = new mongoose.Schema({
     },
     allocation: {
       type: Map,
-      of: Number,
+      of: {
+        percentage: {
+          type: Number,
+          required: true,
+          min: [0, 'Percentage cannot be negative'],
+          max: [100, 'Percentage cannot be more than 100']
+        },
+        amount: {
+          type: Number,
+          required: true,
+          min: [0, 'Amount cannot be negative']
+        }
+      },
       required: [true, 'Please provide allocation data'],
       validate: {
         validator: function(allocation) {
           // Calculate total allocation
-          const total = Array.from(allocation.values()).reduce((sum, value) => sum + value, 0);
+          const total = Array.from(allocation.values())
+            .reduce((sum, value) => sum + value.percentage, 0);
           // Check if total is 100%
           return Math.abs(total - 100) < 0.01;
         },
