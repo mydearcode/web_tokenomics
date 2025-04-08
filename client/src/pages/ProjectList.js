@@ -24,12 +24,14 @@ import {
   Visibility as ViewIcon
 } from '@mui/icons-material';
 import { getProjects, deleteProject } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 const ProjectList = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
 
   const handleDelete = async (projectId) => {
     if (window.confirm('Are you sure you want to delete this project?')) {
@@ -144,7 +146,12 @@ const ProjectList = () => {
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    boxShadow: 6,
+                  },
                 }}
+                onClick={() => navigate(`/projects/${project._id}`)}
               >
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Box display="flex" alignItems="center" mb={1}>
@@ -168,15 +175,7 @@ const ProjectList = () => {
                     {project.tokenomics.totalSupply.toLocaleString()}
                   </Typography>
                 </CardContent>
-                <CardActions>
-                  <Button
-                    size="small"
-                    component={RouterLink}
-                    to={`/projects/${project._id}`}
-                    startIcon={<ViewIcon />}
-                  >
-                    View
-                  </Button>
+                <CardActions onClick={(e) => e.stopPropagation()}>
                   {project.isOwner && (
                     <>
                       <Button
