@@ -106,9 +106,11 @@ const ProjectEdit = () => {
           name: projectData.name || '',
           description: projectData.description || '',
           isPublic: projectData.isPublic || false,
+          tokenName: projectData.tokenName || '',
+          tokenSymbol: projectData.tokenSymbol || '',
           tokenomics: {
-            name: projectData.tokenomics?.name || '',
-            symbol: projectData.tokenomics?.symbol || '',
+            name: projectData.tokenName || '',
+            symbol: projectData.tokenSymbol || '',
             totalSupply: projectData.tokenomics?.totalSupply?.toString() || '',
             initialPrice: projectData.tokenomics?.initialPrice?.toString() || '',
             maxSupply: projectData.tokenomics?.maxSupply?.toString() || '',
@@ -630,39 +632,46 @@ const ProjectEdit = () => {
 
           {vestingSchedule.length > 0 && (
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Accordion>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="h6">Vesting Schedule Preview</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <TableContainer>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Month</TableCell>
-                          <TableCell>Category</TableCell>
-                          <TableCell align="right">Amount</TableCell>
-                          <TableCell align="right">Total Amount</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {vestingSchedule.map((item, index) => (
-                          <TableRow key={`${item.category}-${item.month}-${index}`}>
-                            <TableCell>{item.month}</TableCell>
-                            <TableCell>{item.category.charAt(0).toUpperCase() + item.category.slice(1)}</TableCell>
-                            <TableCell align="right">
-                              {item.amount.toLocaleString()}
-                            </TableCell>
-                            <TableCell align="right">
-                              {item.totalAmount.toLocaleString()}
-                            </TableCell>
+              <Typography variant="h6" gutterBottom>
+                Vesting Schedule Preview
+              </Typography>
+              {vestingSchedule.map((categoryData, index) => (
+                <Accordion key={categoryData.category}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography>
+                      {categoryData.category.charAt(0).toUpperCase() + categoryData.category.slice(1)} 
+                      ({categoryData.allocation}% - TGE: {categoryData.tge}% - 
+                      Cliff: {categoryData.cliff} months - Vesting: {categoryData.vesting} months)
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Month</TableCell>
+                            <TableCell align="right">Amount</TableCell>
+                            <TableCell align="right">Total Amount</TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </AccordionDetails>
-              </Accordion>
+                        </TableHead>
+                        <TableBody>
+                          {categoryData.schedule.map((item, scheduleIndex) => (
+                            <TableRow key={`${categoryData.category}-${item.month}-${scheduleIndex}`}>
+                              <TableCell>{item.month}</TableCell>
+                              <TableCell align="right">
+                                {item.amount.toLocaleString()}
+                              </TableCell>
+                              <TableCell align="right">
+                                {item.totalAmount.toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
             </Paper>
           )}
 
