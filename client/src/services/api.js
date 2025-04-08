@@ -127,11 +127,11 @@ export const login = async (email, password) => {
     
     // Return a more specific error message
     if (error.response?.status === 400) {
-      throw new Error('Geçersiz e-posta veya şifre');
+      throw new Error('Invalid email or password');
     } else if (error.response?.status === 401) {
-      throw new Error('Kimlik doğrulama başarısız');
+      throw new Error('Authentication failed');
     } else {
-      throw new Error(error.response?.data?.message || 'Giriş başarısız oldu');
+      throw new Error(error.response?.data?.message || 'Login failed');
     }
   }
 };
@@ -375,20 +375,20 @@ export const addProjectCollaborator = async (projectId, email, role) => {
     console.error('API: Error details:', errorDetails);
     
     // Normalize the error object to provide consistent interface
-    let errorMessage = 'Kullanıcı eklenirken bir hata oluştu.';
+    let errorMessage = 'An error occurred while adding the user.';
     
     if (error.response) {
       if (error.response.status === 404) {
-        errorMessage = 'Kullanıcı bu e-posta ile bulunamadı.';
+        errorMessage = 'User not found with this email.';
       } else if (error.response.status === 400) {
-        errorMessage = error.response.data?.message || 'Geçersiz istek. Bu kullanıcı zaten eklenmiş olabilir.';
+        errorMessage = error.response.data?.message || 'Invalid request. This user may already be added.';
       } else if (error.response.status === 403) {
-        errorMessage = 'Bu işlem için yetkiniz bulunmuyor.';
+        errorMessage = 'You do not have permission for this operation.';
       } else if (error.response.status === 500) {
-        errorMessage = `Sunucu hatası: ${error.response.data?.message || 'Bilinmeyen hata'}`;
+        errorMessage = `Server error: ${error.response.data?.message || 'Unknown error'}`;
       }
     } else if (error.request) {
-      errorMessage = 'Sunucu yanıt vermiyor. İnternet bağlantınızı kontrol edin.';
+      errorMessage = 'Server is not responding. Please check your internet connection.';
     }
     
     throw new Error(errorMessage);
@@ -420,20 +420,20 @@ export const removeProjectCollaborator = async (projectId, userId) => {
     console.error('API: Error details:', errorDetails);
     
     // Normalize the error object to provide consistent interface
-    let errorMessage = 'Kullanıcı kaldırılırken bir hata oluştu.';
+    let errorMessage = 'An error occurred while removing the user.';
     
     if (error.response) {
       if (error.response.status === 404) {
-        errorMessage = 'Kullanıcı veya proje bulunamadı.';
+        errorMessage = 'User or project not found.';
       } else if (error.response.status === 400) {
-        errorMessage = error.response.data?.message || 'Geçersiz istek.';
+        errorMessage = error.response.data?.message || 'Invalid request.';
       } else if (error.response.status === 403) {
-        errorMessage = 'Bu işlem için yetkiniz bulunmuyor.';
+        errorMessage = 'You do not have permission for this operation.';
       } else if (error.response.status === 500) {
-        errorMessage = `Sunucu hatası: ${error.response.data?.message || 'Bilinmeyen hata'}`;
+        errorMessage = `Server error: ${error.response.data?.message || 'Unknown error'}`;
       }
     } else if (error.request) {
-      errorMessage = 'Sunucu yanıt vermiyor. İnternet bağlantınızı kontrol edin.';
+      errorMessage = 'Server is not responding. Please check your internet connection.';
     }
     
     throw new Error(errorMessage);
