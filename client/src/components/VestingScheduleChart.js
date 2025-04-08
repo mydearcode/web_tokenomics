@@ -30,7 +30,6 @@ const VestingScheduleChart = ({ project }) => {
 
   const calculateVestingSchedule = (project) => {
     const { tokenomics, vesting } = project;
-    const totalSupply = tokenomics.totalSupply;
     const categories = Object.keys(tokenomics.allocation);
     
     // Find the maximum vesting period
@@ -45,6 +44,7 @@ const VestingScheduleChart = ({ project }) => {
     const data = [];
     for (let month = 0; month <= maxMonths; month++) {
       const dataPoint = { month };
+      let totalVestedPercentage = 0;
       
       // Calculate vested amount for each category
       categories.forEach(category => {
@@ -61,27 +61,39 @@ const VestingScheduleChart = ({ project }) => {
           if (month === 0) {
             vestedPercentage = tgePercentage;
           }
+          // During cliff period
+          else if (month <= cliffMonths) {
+            vestedPercentage = tgePercentage;
+          }
           // After cliff period
-          else if (month > cliffMonths) {
-            // Calculate linear vesting after cliff
-            const vestingAfterCliff = 100 - tgePercentage;
+          else {
             const monthsAfterCliff = month - cliffMonths;
-            const monthlyVesting = vestingAfterCliff / vestingMonths;
+            const remainingPercentage = 100 - tgePercentage;
             
             if (monthsAfterCliff >= vestingMonths) {
               // Fully vested
               vestedPercentage = 100;
             } else {
-              // Partially vested
+              // Linear vesting after cliff
+              const monthlyVesting = remainingPercentage / vestingMonths;
               vestedPercentage = tgePercentage + (monthlyVesting * monthsAfterCliff);
             }
           }
           
+          // Ensure vested percentage doesn't exceed 100%
+          vestedPercentage = Math.min(vestedPercentage, 100);
+          
           // Calculate vested amount
           const vestedAmount = (amount * vestedPercentage) / 100;
           dataPoint[category] = Number(vestedAmount.toFixed(2));
+          
+          // Add to total vested percentage
+          totalVestedPercentage += vestedPercentage;
         }
       });
+      
+      // Add total vested percentage to data point
+      dataPoint.totalVestedPercentage = Number((totalVestedPercentage / categories.length).toFixed(2));
       
       data.push(dataPoint);
     }
@@ -91,6 +103,25 @@ const VestingScheduleChart = ({ project }) => {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <Paper sx={{ p: 2, backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+          <Typography variant="subtitle2">Month {label}</Typography>
+          {payload.map((entry, index) => (
+            <Typography key={index} style={{ color: entry.color }}>
+              {entry.name}: {entry.value.toLocaleString()} tokens
+            </Typography>
+          ))}
+          <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+            Total Vested: {payload[0].payload.totalVestedPercentage}%
+          </Typography>
+        </Paper>
+      );
+    }
+    return null;
   };
 
   if (!project || !chartData.length) {
@@ -131,17 +162,31 @@ const VestingScheduleChart = ({ project }) => {
               data={chartData}
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" label={{ value: 'Months', position: 'bottom' }} />
-              <YAxis label={{ value: 'Tokens', angle: -90, position: 'insideLeft' }} />
-              <Tooltip />
-              <Legend />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+              <XAxis 
+                dataKey="month" 
+                label={{ value: 'Months', position: 'bottom' }}
+                tick={{ fill: '#666' }}
+              />
+              <YAxis 
+                label={{ value: 'Tokens', angle: -90, position: 'insideLeft' }}
+                tick={{ fill: '#666' }}
+                tickFormatter={(value) => value.toLocaleString()}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend 
+                verticalAlign="top" 
+                height={36}
+                wrapperStyle={{ paddingBottom: '20px' }}
+              />
               {categories.map((category, index) => (
                 <Line
                   key={category}
                   type="monotone"
                   dataKey={category}
                   stroke={colors[index % colors.length]}
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
                   activeDot={{ r: 8 }}
                 />
               ))}
@@ -155,23 +200,29 @@ const VestingScheduleChart = ({ project }) => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>Month</th>
+                <th style={{ padding: '12px', borderBottom: '2px solid #ddd', textAlign: 'left' }}>Month</th>
                 {categories.map(category => (
-                  <th key={category} style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>
+                  <th key={category} style={{ padding: '12px', borderBottom: '2px solid #ddd', textAlign: 'right' }}>
                     {category}
                   </th>
                 ))}
+                <th style={{ padding: '12px', borderBottom: '2px solid #ddd', textAlign: 'right' }}>
+                  Total Vested %
+                </th>
               </tr>
             </thead>
             <tbody>
               {chartData.map((row, index) => (
-                <tr key={index}>
-                  <td style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>{row.month}</td>
+                <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white' }}>
+                  <td style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>{row.month}</td>
                   {categories.map(category => (
-                    <td key={category} style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>
+                    <td key={category} style={{ padding: '12px', borderBottom: '1px solid #ddd', textAlign: 'right' }}>
                       {row[category]?.toLocaleString() || 0}
                     </td>
                   ))}
+                  <td style={{ padding: '12px', borderBottom: '1px solid #ddd', textAlign: 'right' }}>
+                    {row.totalVestedPercentage}%
+                  </td>
                 </tr>
               ))}
             </tbody>
