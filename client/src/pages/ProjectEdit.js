@@ -133,51 +133,70 @@ const ProjectEdit = () => {
     fetchProject();
   }, [id, user, navigate]);
 
-  // Calculate vesting schedule whenever allocation or vesting data changes
-  useEffect(() => {
-    const schedule = [];
-    const totalSupply = Number(formData.tokenomics.totalSupply) || 0;
-
-    Object.entries(formData.tokenomics.allocation).forEach(([category, allocation]) => {
-      const vesting = formData.vesting[category] || { tgePercentage: 0, cliffMonths: 0, vestingMonths: 0 };
-      const totalTokens = (allocation.percentage / 100) * totalSupply;
-      const tgeAmount = (vesting.tgePercentage / 100) * totalTokens;
-      const remainingTokens = totalTokens - tgeAmount;
+  const calculateVestingSchedule = () => {
+    if (!formData.tokenomics.allocation || !formData.vesting) return [];
+    
+    return Object.entries(formData.tokenomics.allocation).map(([category, allocation]) => {
+      const vestingInfo = formData.vesting[category];
+      if (!vestingInfo) return null;
       
-      if (vesting.vestingMonths > 0) {
-        const monthlyAmount = remainingTokens / vesting.vestingMonths;
-        let currentAmount = tgeAmount;
-
-        for (let month = 0; month <= vesting.vestingMonths + vesting.cliffMonths; month++) {
-          if (month === 0 && tgeAmount > 0) {
-            schedule.push({
-              month,
-              category,
-              amount: tgeAmount,
-              totalAmount: currentAmount
-            });
-          } else if (month > vesting.cliffMonths) {
-            currentAmount += monthlyAmount;
-            schedule.push({
-              month,
-              category,
-              amount: monthlyAmount,
-              totalAmount: currentAmount
-            });
-          }
-        }
-      } else if (tgeAmount > 0) {
+      const { percentage, amount } = allocation;
+      const { tgePercentage, cliffMonths, vestingMonths } = vestingInfo;
+      
+      // Calculate schedule for this category
+      const schedule = [];
+      let totalVested = 0;
+      
+      // TGE (Token Generation Event)
+      if (tgePercentage > 0) {
+        const tgeAmount = (amount * tgePercentage) / 100;
+        totalVested += tgeAmount;
         schedule.push({
           month: 0,
-          category,
           amount: tgeAmount,
-          totalAmount: tgeAmount
+          totalAmount: totalVested
         });
       }
-    });
+      
+      // During cliff period
+      for (let month = 1; month <= cliffMonths; month++) {
+        schedule.push({
+          month,
+          amount: 0,
+          totalAmount: totalVested
+        });
+      }
+      
+      // After cliff period
+      const remainingAmount = amount - totalVested;
+      const remainingMonths = vestingMonths;
+      const monthlyAmount = remainingAmount / remainingMonths;
+      
+      for (let month = cliffMonths + 1; month <= cliffMonths + vestingMonths; month++) {
+        totalVested += monthlyAmount;
+        schedule.push({
+          month,
+          amount: monthlyAmount,
+          totalAmount: totalVested
+        });
+      }
+      
+      return {
+        category,
+        allocation: percentage,
+        tge: tgePercentage,
+        cliff: cliffMonths,
+        vesting: vestingMonths,
+        schedule
+      };
+    }).filter(Boolean);
+  };
 
-    setVestingSchedule(schedule);
-  }, [formData.tokenomics.allocation, formData.vesting, formData.tokenomics.totalSupply]);
+  // Update vestingSchedule when formData changes
+  useEffect(() => {
+    const newSchedule = calculateVestingSchedule();
+    setVestingSchedule(newSchedule);
+  }, [formData.tokenomics.allocation, formData.vesting]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -635,7 +654,7 @@ const ProjectEdit = () => {
               <Typography variant="h6" gutterBottom>
                 Vesting Schedule Preview
               </Typography>
-              {vestingSchedule.map((categoryData, index) => (
+              {vestingSchedule.map((categoryData) => (
                 <Accordion key={categoryData.category}>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Typography>
@@ -655,8 +674,8 @@ const ProjectEdit = () => {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {categoryData.schedule.map((item, scheduleIndex) => (
-                            <TableRow key={`${categoryData.category}-${item.month}-${scheduleIndex}`}>
+                          {categoryData.schedule.map((item, index) => (
+                            <TableRow key={`${categoryData.category}-${item.month}-${index}`}>
                               <TableCell>{item.month}</TableCell>
                               <TableCell align="right">
                                 {item.amount.toLocaleString()}
