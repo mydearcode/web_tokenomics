@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -13,22 +13,34 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Button,
+  Snackbar,
+  Alert,
 } from '@mui/material';
-import { getProject } from '../services/api';
+import { getProject, getPublicProject } from '../services/api';
 import AllocationChart from '../components/AllocationChart';
 import VestingScheduleChart from '../components/VestingScheduleChart';
 import ProjectActions from '../components/ProjectActions';
 
 const ProjectDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const response = await getProject(id);
+        let response;
+        // First try to get the project as a public project
+        try {
+          response = await getPublicProject(id);
+        } catch (err) {
+          // If public project fails, try authenticated route
+          response = await getProject(id);
+        }
         setProject(response);
         setLoading(false);
       } catch (err) {
@@ -39,6 +51,24 @@ const ProjectDetails = () => {
 
     fetchProject();
   }, [id]);
+
+  const handleShare = async () => {
+    try {
+      const shareUrl = `${window.location.origin}/project/${id}`;
+      await navigator.clipboard.writeText(shareUrl);
+      setSnackbar({
+        open: true,
+        message: 'Project URL copied to clipboard!',
+        severity: 'success'
+      });
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to copy URL',
+        severity: 'error'
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -52,6 +82,14 @@ const ProjectDetails = () => {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Typography color="error">{error}</Typography>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={() => navigate('/')}
+          sx={{ mt: 2 }}
+        >
+          Back to Home
+        </Button>
       </Box>
     );
   }
@@ -60,6 +98,14 @@ const ProjectDetails = () => {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Typography>Project not found</Typography>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={() => navigate('/')}
+          sx={{ mt: 2 }}
+        >
+          Back to Home
+        </Button>
       </Box>
     );
   }
@@ -71,8 +117,23 @@ const ProjectDetails = () => {
           <Typography variant="h4" component="h1" gutterBottom>
             {project.name}
           </Typography>
-          <ProjectActions project={project} />
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={handleShare}
+              disabled={!project.isPublic}
+            >
+              Share Project
+            </Button>
+            <ProjectActions project={project} />
+          </Box>
         </Box>
+
+        {!project.isPublic && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            This project is private. Only you can view it.
+          </Alert>
+        )}
 
         <Typography variant="body1" paragraph>
           {project.description}
@@ -158,6 +219,20 @@ const ProjectDetails = () => {
           </Grid>
         </Grid>
       </Box>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
