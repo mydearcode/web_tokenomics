@@ -36,15 +36,25 @@ const ProjectDetails = () => {
     const fetchProject = async () => {
       try {
         let response;
-        // First try to get the project as a public project
+        // If user is logged in, try authenticated route first
+        if (user) {
+          try {
+            response = await getProject(id);
+            setProject(response);
+            setLoading(false);
+            return;
+          } catch (err) {
+            console.log('Authenticated route failed, trying public route...');
+          }
+        }
+        
+        // Try public route
         try {
           response = await getPublicProject(id);
           setProject(response);
         } catch (err) {
-          // If public project fails and user is logged in, try authenticated route
           if (user) {
-            response = await getProject(id);
-            setProject(response);
+            throw new Error('You do not have access to this project.');
           } else {
             throw new Error('This project is not public. Please login to view it.');
           }
