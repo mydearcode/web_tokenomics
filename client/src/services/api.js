@@ -466,7 +466,7 @@ export const checkProjectAccess = async (projectId) => {
 
 export const getPublicProject = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/projects/public/${id}`);
+    const response = await axios.get(`${API_URL}/api/projects/public/${id}`);
     return response.data;
   } catch (error) {
     if (error.response) {
