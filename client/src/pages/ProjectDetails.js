@@ -122,20 +122,31 @@ const ProjectDetails = () => {
                       <TableCell>Category</TableCell>
                       <TableCell align="right">Amount</TableCell>
                       <TableCell align="right">Percentage</TableCell>
+                      <TableCell align="center">Vesting Details</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {Object.entries(project.tokenomics.allocation).map(([category, data]) => (
-                      <TableRow key={category}>
-                        <TableCell component="th" scope="row">
-                          {category.charAt(0).toUpperCase() + category.slice(1)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {data.amount.toLocaleString()}
-                        </TableCell>
-                        <TableCell align="right">{data.percentage}%</TableCell>
-                      </TableRow>
-                    ))}
+                    {Object.entries(project.tokenomics.allocation).map(([category, data]) => {
+                      const vestingInfo = project.vesting[category] || {};
+                      return (
+                        <TableRow key={category}>
+                          <TableCell component="th" scope="row">
+                            {category.charAt(0).toUpperCase() + category.slice(1)}
+                          </TableCell>
+                          <TableCell align="right">
+                            {data.amount.toLocaleString()}
+                          </TableCell>
+                          <TableCell align="right">{data.percentage}%</TableCell>
+                          <TableCell align="center">
+                            {vestingInfo.tgePercentage !== undefined ? (
+                              `(TGE: ${vestingInfo.tgePercentage}% - Cliff: ${vestingInfo.cliffMonths} months - Vesting: ${vestingInfo.vestingMonths} months)`
+                            ) : (
+                              'No vesting schedule'
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
