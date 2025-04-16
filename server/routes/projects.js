@@ -623,23 +623,7 @@ router.get('/public/:id', async (req, res) => {
       return res.status(403).json({ message: 'This project is not public' });
     }
     
-    // Return only public information
-    const publicProject = {
-      _id: project._id,
-      name: project.name,
-      description: project.description,
-      isPublic: project.isPublic,
-      tokenName: project.tokenName,
-      tokenSymbol: project.tokenSymbol,
-      tokenomics: project.tokenomics,
-      vesting: project.vesting,
-      owner: {
-        _id: project.owner._id,
-        name: project.owner.name
-      }
-    };
-    
-    res.json(publicProject);
+    res.json(project);
   } catch (error) {
     console.error('Get public project error:', error);
     res.status(500).json({ message: 'Server error' });

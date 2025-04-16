@@ -466,13 +466,13 @@ export const checkProjectAccess = async (projectId) => {
 
 export const getPublicProject = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/api/projects/public/${id}`);
+    console.log('Fetching public project:', id);
+    const response = await api.get(`/api/projects/public/${id}`);
+    console.log('Public project response:', response.data);
     return response.data;
   } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.message || 'Failed to fetch public project');
-    }
-    throw new Error('Failed to fetch public project');
+    console.error('Get public project error:', error.response?.data || error.message);
+    throw error;
   }
 };
 
