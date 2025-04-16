@@ -467,7 +467,8 @@ export const checkProjectAccess = async (projectId) => {
 export const getPublicProject = async (id) => {
   try {
     console.log('Fetching public project:', id);
-    const response = await api.get(`/api/projects/public/${id}`);
+    // Make unauthenticated request for public projects
+    const response = await axios.get(`${API_URL}/api/projects/public/${id}`);
     console.log('Public project response:', response.data);
     return response.data;
   } catch (error) {

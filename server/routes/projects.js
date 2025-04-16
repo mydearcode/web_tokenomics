@@ -30,9 +30,18 @@ router.get('/:id', protect, async (req, res) => {
     }
 
     // Check if user has access to the project
-    const isOwner = project.owner._id.toString() === req.user._id.toString();
+    const ownerId = typeof project.owner === 'object' && project.owner._id 
+      ? project.owner._id.toString() 
+      : project.owner.toString();
+    
+    const isOwner = ownerId === req.user._id.toString();
     const isCollaborator = project.collaborators.some(
-      c => c.user._id.toString() === req.user._id.toString()
+      c => {
+        const collabUserId = typeof c.user === 'object' && c.user._id 
+          ? c.user._id.toString() 
+          : c.user.toString();
+        return collabUserId === req.user._id.toString();
+      }
     );
     
     if (!isOwner && !isCollaborator && !project.isPublic) {
