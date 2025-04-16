@@ -42,14 +42,24 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    // Check if project is public
+    // If project is public, return it
     if (project.isPublic) {
       return res.json(project);
     }
 
-    // For private projects, require authentication
-    if (!req.user) {
+    // For private projects, check authentication
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
       return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Verify token and get user
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.id);
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'User not found' });
     }
 
     // Check if user has access
@@ -60,6 +70,9 @@ router.get('/:id', async (req, res) => {
     res.json(project);
   } catch (error) {
     console.error('Get project error:', error);
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 });

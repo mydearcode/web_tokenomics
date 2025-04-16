@@ -32,17 +32,13 @@ const ProjectDetails = () => {
         setLoading(true);
         const data = await getProject(id);
         
-        // Check if user has access to the project
-        if (!data.isPublic && !isAuthenticated) {
-          setError('Please log in to view this project');
-          return;
-        }
-
         // Check if user has edit permissions
-        const canEdit = data.owner._id === user?._id || 
+        const canEdit = isAuthenticated && (
+          data.owner._id === user?._id || 
           data.collaborators?.some(collab => 
             collab.user._id === user?._id && collab.role === 'editor'
-          );
+          )
+        );
 
         setProject({
           ...data,

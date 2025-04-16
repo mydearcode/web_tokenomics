@@ -257,9 +257,20 @@ export const getProjects = async () => {
 export const getProject = async (id) => {
   try {
     console.log('Fetching project:', id);
-    const response = await api.get(`/api/projects/${id}`);
-    console.log('Project response:', response.data);
-    return response.data;
+    const token = localStorage.getItem('token');
+    
+    // Try to get the project (will work for both public and private if authenticated)
+    try {
+      const response = await api.get(`/api/projects/${id}`);
+      console.log('Project response:', response.data);
+      return response.data;
+    } catch (error) {
+      // If unauthorized and not a different error, project might be private
+      if (error.response?.status === 401) {
+        throw new Error('Authentication required');
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Get project error:', error.response?.data || error.message);
     if (error.response?.status === 400) {
