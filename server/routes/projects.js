@@ -4,6 +4,7 @@ const Project = require('../models/Project');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const { checkProjectAccess, checkEditAccess } = require('../middleware/projectAccess');
+const mongoose = require('mongoose');
 
 // Get all public projects or projects user has access to
 router.get('/', protect, async (req, res) => {
@@ -28,6 +29,11 @@ router.get('/', protect, async (req, res) => {
 // Get single project with access control
 router.get('/:id', async (req, res) => {
   try {
+    // Validate project ID
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid project ID' });
+    }
+
     const project = await Project.findById(req.params.id)
       .populate('owner', 'name email')
       .populate('collaborators.user', 'name email');

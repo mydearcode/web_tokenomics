@@ -50,10 +50,15 @@ const ProjectDetails = () => {
         });
         setError(null);
       } catch (err) {
-        if (err.message === 'Authentication required') {
+        console.error('Error fetching project:', err);
+        if (err.message === 'Invalid project ID') {
+          setError('Invalid project ID');
+        } else if (err.message === 'Authentication required') {
           setError('Please log in to view this project');
         } else if (err.message === 'Not authorized to access this project') {
           setError('You do not have permission to view this project');
+        } else if (err.message === 'Project not found') {
+          setError('Project not found');
         } else {
           setError(err.message || 'Failed to load project details');
         }
@@ -127,7 +132,7 @@ const ProjectDetails = () => {
       <Container maxWidth="md">
         <Alert severity="error" sx={{ mt: 4 }}>
           {error}
-          {!isAuthenticated && (
+          {!isAuthenticated && error === 'Please log in to view this project' && (
             <Button
               color="primary"
               variant="contained"

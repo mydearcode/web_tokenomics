@@ -262,7 +262,9 @@ export const getProject = async (id) => {
     return response.data;
   } catch (error) {
     console.error('Get project error:', error.response?.data || error.message);
-    if (error.response?.status === 401) {
+    if (error.response?.status === 400) {
+      throw new Error('Invalid project ID');
+    } else if (error.response?.status === 401) {
       throw new Error('Authentication required');
     } else if (error.response?.status === 403) {
       throw new Error('Not authorized to access this project');
