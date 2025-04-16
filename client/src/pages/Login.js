@@ -32,12 +32,12 @@ const Login = () => {
       navigate('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
-      let errorMessage = 'Giriş başarısız oldu. Lütfen tekrar deneyin.';
+      let errorMessage = 'Login failed. Please try again.';
       
-      if (err.message.includes('Geçersiz e-posta veya şifre')) {
-        errorMessage = 'E-posta adresi veya şifre hatalı. Lütfen tekrar deneyin.';
-      } else if (err.message.includes('Kimlik doğrulama başarısız')) {
-        errorMessage = 'Kimlik doğrulama başarısız. Lütfen tekrar giriş yapın.';
+      if (err.message.includes('Invalid email or password')) {
+        errorMessage = 'Invalid email or password. Please try again.';
+      } else if (err.message.includes('Authentication failed')) {
+        errorMessage = 'Authentication failed. Please try logging in again.';
       }
       
       setError(errorMessage);
@@ -57,7 +57,7 @@ const Login = () => {
         }}
       >
         <Typography component="h1" variant="h5">
-          Giriş Yap
+          Login
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           {error && (
@@ -70,7 +70,7 @@ const Login = () => {
             required
             fullWidth
             id="email"
-            label="E-posta Adresi"
+            label="Email Address"
             name="email"
             autoComplete="email"
             autoFocus
@@ -83,7 +83,7 @@ const Login = () => {
             required
             fullWidth
             name="password"
-            label="Şifre"
+            label="Password"
             type="password"
             id="password"
             autoComplete="current-password"
@@ -98,11 +98,11 @@ const Login = () => {
             sx={{ mt: 3, mb: 2 }}
             disabled={loading}
           >
-            {loading ? <CircularProgress size={24} /> : 'Giriş Yap'}
+            {loading ? <CircularProgress size={24} /> : 'Login'}
           </Button>
           <Box sx={{ textAlign: 'center' }}>
             <Link href="/register" variant="body2">
-              Hesabınız yok mu? Kayıt olun
+              Don't have an account? Register
             </Link>
           </Box>
         </Box>

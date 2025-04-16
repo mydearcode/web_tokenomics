@@ -100,38 +100,32 @@ export const login = async (email, password) => {
         'Content-Type': 'application/json'
       }
     });
-    
+
     console.log('Login response:', response.data);
-    
+
     if (response.data.token) {
       // Store token and user data
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       
-      // Set default authorization header for all future requests
+      // Set default authorization header
       api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
       
-      console.log('Token stored and headers updated:', {
-        token: response.data.token.substring(0, 10) + '...',
-        user: response.data.user
-      });
-    }
-    return response.data;
-  } catch (error) {
-    console.error('Login error details:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      statusText: error.response?.statusText
-    });
-    
-    // Return a more specific error message
-    if (error.response?.status === 400) {
-      throw new Error('Invalid email or password');
-    } else if (error.response?.status === 401) {
-      throw new Error('Authentication failed');
+      return response.data;
     } else {
-      throw new Error(error.response?.data?.message || 'Login failed');
+      throw new Error('No token received from server');
+    }
+  } catch (error) {
+    console.error('Login error:', error.response?.data || error.message);
+    
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.message === 'No token received from server') {
+      throw new Error('Kimlik doğrulama başarısız');
+    } else if (error.response?.status === 401) {
+      throw new Error('Geçersiz e-posta veya şifre');
+    } else {
+      throw new Error('Giriş başarısız oldu');
     }
   }
 };
