@@ -608,4 +608,26 @@ router.get('/:id/check-access', protect, async (req, res) => {
   }
 });
 
+// Get public project
+router.get('/public/:id', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id)
+      .populate('owner', 'name email')
+      .populate('collaborators.user', 'name email');
+    
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    if (!project.isPublic) {
+      return res.status(403).json({ message: 'This project is not public' });
+    }
+    
+    res.json(project);
+  } catch (error) {
+    console.error('Get public project error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router; 
