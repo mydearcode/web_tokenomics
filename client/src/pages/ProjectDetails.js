@@ -31,15 +31,31 @@ const ProjectDetails = () => {
       try {
         setLoading(true);
         const data = await getProject(id);
-        setProject(data);
+        
+        // Check if user has access to the project
+        if (!data.isPublic && !isAuthenticated) {
+          setError('Please log in to view this project');
+          return;
+        }
+
+        // Check if user has edit permissions
+        const canEdit = data.owner._id === user?._id || 
+          data.collaborators?.some(collab => 
+            collab.user._id === user?._id && collab.role === 'editor'
+          );
+
+        setProject({
+          ...data,
+          canEdit: () => canEdit
+        });
         setError(null);
       } catch (err) {
-        if (err.response?.status === 401) {
+        if (err.message === 'Authentication required') {
           setError('Please log in to view this project');
-        } else if (err.response?.status === 403) {
+        } else if (err.message === 'Not authorized to access this project') {
           setError('You do not have permission to view this project');
         } else {
-          setError('Failed to load project details');
+          setError(err.message || 'Failed to load project details');
         }
       } finally {
         setLoading(false);
@@ -47,7 +63,7 @@ const ProjectDetails = () => {
     };
 
     fetchProject();
-  }, [id]);
+  }, [id, isAuthenticated, user?._id]);
 
   const handleEdit = () => {
     if (!isAuthenticated) {
@@ -55,7 +71,7 @@ const ProjectDetails = () => {
       return;
     }
 
-    if (!project.canEdit(user._id)) {
+    if (!project.canEdit()) {
       setError('You do not have permission to edit this project');
       return;
     }
@@ -66,7 +82,13 @@ const ProjectDetails = () => {
   const handleSave = async (updatedData) => {
     try {
       const updatedProject = await updateProject(id, updatedData);
-      setProject(updatedProject);
+      setProject({
+        ...updatedProject,
+        canEdit: () => updatedProject.owner._id === user._id || 
+          updatedProject.collaborators?.some(collab => 
+            collab.user._id === user._id && collab.role === 'editor'
+          )
+      });
       setIsEditing(false);
       setError(null);
     } catch (err) {
@@ -80,7 +102,13 @@ const ProjectDetails = () => {
         ...project,
         isPublic: !project.isPublic
       });
-      setProject(updatedProject);
+      setProject({
+        ...updatedProject,
+        canEdit: () => updatedProject.owner._id === user._id || 
+          updatedProject.collaborators?.some(collab => 
+            collab.user._id === user._id && collab.role === 'editor'
+          )
+      });
     } catch (err) {
       setError('Failed to update project visibility');
     }
@@ -132,7 +160,7 @@ const ProjectDetails = () => {
             {project.name}
           </Typography>
           <Box>
-            {isAuthenticated && project.canEdit(user._id) && (
+            {isAuthenticated && project.canEdit() && (
               <>
                 <Tooltip title={project.isPublic ? "Make Private" : "Make Public"}>
                   <IconButton onClick={handleToggleVisibility} color="primary">

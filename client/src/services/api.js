@@ -256,24 +256,21 @@ export const getProjects = async () => {
 
 export const getProject = async (id) => {
   try {
+    console.log('Fetching project:', id);
     const response = await api.get(`/api/projects/${id}`);
     console.log('Project response:', response.data);
-    
-    // If response has data.data structure
-    if (response.data?.data) {
-      return response.data.data;
-    }
-    
-    // If response is directly the project
     return response.data;
   } catch (error) {
     console.error('Get project error:', error.response?.data || error.message);
     if (error.response?.status === 401) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      throw new Error('Authentication required');
+    } else if (error.response?.status === 403) {
+      throw new Error('Not authorized to access this project');
+    } else if (error.response?.status === 404) {
+      throw new Error('Project not found');
+    } else {
+      throw new Error('Failed to load project');
     }
-    throw error;
   }
 };
 

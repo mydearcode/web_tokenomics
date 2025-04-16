@@ -5,12 +5,19 @@ const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const { checkProjectAccess, checkEditAccess } = require('../middleware/projectAccess');
 
-// Get all projects
-router.get('/', async (req, res) => {
+// Get all public projects or projects user has access to
+router.get('/', protect, async (req, res) => {
   try {
-    const projects = await Project.find()
-      .populate('owner', 'name email')
-      .populate('collaborators.user', 'name email');
+    const projects = await Project.find({
+      $or: [
+        { isPublic: true },
+        { owner: req.user._id },
+        { 'collaborators.user': req.user._id }
+      ]
+    })
+    .populate('owner', 'name email')
+    .populate('collaborators.user', 'name email');
+    
     res.json(projects);
   } catch (error) {
     console.error('Get projects error:', error);
@@ -18,8 +25,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get single project
-router.get('/:id', protect, async (req, res) => {
+// Get single project with access control
+router.get('/:id', async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
       .populate('owner', 'name email')
@@ -29,25 +36,21 @@ router.get('/:id', protect, async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    // Check if user has access to the project
-    const ownerId = typeof project.owner === 'object' && project.owner._id 
-      ? project.owner._id.toString() 
-      : project.owner.toString();
-    
-    const isOwner = ownerId === req.user._id.toString();
-    const isCollaborator = project.collaborators.some(
-      c => {
-        const collabUserId = typeof c.user === 'object' && c.user._id 
-          ? c.user._id.toString() 
-          : c.user.toString();
-        return collabUserId === req.user._id.toString();
-      }
-    );
-    
-    if (!isOwner && !isCollaborator && !project.isPublic) {
+    // Check if project is public
+    if (project.isPublic) {
+      return res.json(project);
+    }
+
+    // For private projects, require authentication
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Check if user has access
+    if (!project.hasAccess(req.user._id)) {
       return res.status(403).json({ message: 'Not authorized to access this project' });
     }
-    
+
     res.json(project);
   } catch (error) {
     console.error('Get project error:', error);
@@ -58,11 +61,6 @@ router.get('/:id', protect, async (req, res) => {
 // Create project
 router.post('/', protect, async (req, res) => {
   try {
-    console.log('Project creation request:', {
-      body: req.body,
-      userId: req.user._id
-    });
-
     // Validate required fields
     const { name, description, tokenName, tokenSymbol, tokenomics } = req.body;
 
@@ -70,8 +68,8 @@ router.post('/', protect, async (req, res) => {
       return res.status(400).json({
         message: 'Missing required fields',
         details: {
-          name: !name ? 'Name is required' : null,
-          description: !description ? 'Description is required' : null,
+          name: !name ? 'Project name is required' : null,
+          description: !description ? 'Project description is required' : null,
           tokenName: !tokenName ? 'Token name is required' : null,
           tokenSymbol: !tokenSymbol ? 'Token symbol is required' : null
         }
@@ -87,28 +85,19 @@ router.post('/', protect, async (req, res) => {
       });
     }
 
-    // Create project data with owner
-    const projectData = {
+    // Create project with owner
+    const project = new Project({
       ...req.body,
       owner: req.user._id
-    };
+    });
 
-    console.log('Creating project with data:', projectData);
-
-    // Create and save the project
-    const project = new Project(projectData);
     await project.save();
-
-    // Populate owner field with user details
     await project.populate('owner', 'name email');
-
-    console.log('Project created successfully:', project);
 
     res.status(201).json(project);
   } catch (error) {
-    console.error('Project creation error:', error);
-
-    // Handle validation errors
+    console.error('Create project error:', error);
+    
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map(err => ({
         field: err.path,
@@ -120,73 +109,39 @@ router.post('/', protect, async (req, res) => {
       });
     }
 
-    // Handle other errors
-    res.status(500).json({
-      message: 'Server error',
-      error: error.message
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // Update project
 router.put('/:id', protect, async (req, res) => {
   try {
-    console.log('Project update request:', {
-      id: req.params.id,
-      body: req.body,
-      userId: req.user._id
-    });
-
-    // Find the project
-    const project = await Project.findById(req.params.id);
+    const project = await Project.findById(req.params.id)
+      .populate('owner', 'name email')
+      .populate('collaborators.user', 'name email');
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    // Check if user is the owner
-    if (project.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to update this project' });
+    // Check if user can edit
+    if (!project.canEdit(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to edit this project' });
     }
 
-    // Validate required fields
-    const { name, description, tokenName, tokenSymbol, tokenomics } = req.body;
-
-    if (!name || !description || !tokenName || !tokenSymbol) {
-      return res.status(400).json({
-        message: 'Missing required fields',
-        details: {
-          name: !name ? 'Name is required' : null,
-          description: !description ? 'Description is required' : null,
-          tokenName: !tokenName ? 'Token name is required' : null,
-          tokenSymbol: !tokenSymbol ? 'Token symbol is required' : null
-        }
-      });
-    }
-
-    if (!tokenomics || !tokenomics.totalSupply) {
-      return res.status(400).json({
-        message: 'Missing tokenomics data',
-        details: {
-          totalSupply: !tokenomics?.totalSupply ? 'Total supply is required' : null
-        }
-      });
-    }
-
-    // Update project data
+    // Update project
     const updatedProject = await Project.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
-    ).populate('owner', 'name email');
-
-    console.log('Project updated successfully:', updatedProject);
+    )
+    .populate('owner', 'name email')
+    .populate('collaborators.user', 'name email');
 
     res.json(updatedProject);
   } catch (error) {
-    console.error('Project update error:', error);
-
-    // Handle validation errors
+    console.error('Update project error:', error);
+    
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map(err => ({
         field: err.path,
@@ -198,11 +153,7 @@ router.put('/:id', protect, async (req, res) => {
       });
     }
 
-    // Handle other errors
-    res.status(500).json({
-      message: 'Server error',
-      error: error.message
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -210,21 +161,50 @@ router.put('/:id', protect, async (req, res) => {
 router.delete('/:id', protect, async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
-    
+
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    // Check if user is the owner
-    if (project.owner.toString() !== req.user._id.toString()) {
+    // Only owner can delete
+    const ownerId = project.owner._id ? project.owner._id.toString() : project.owner.toString();
+    if (ownerId !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized to delete this project' });
     }
 
-    await project.deleteProject();
+    await project.deleteOne();
     res.json({ message: 'Project deleted successfully' });
   } catch (error) {
     console.error('Delete project error:', error);
-    res.status(500).json({ message: 'Error deleting project' });
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Toggle project visibility
+router.patch('/:id/visibility', protect, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Only owner can toggle visibility
+    const ownerId = project.owner._id ? project.owner._id.toString() : project.owner.toString();
+    if (ownerId !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to change project visibility' });
+    }
+
+    project.isPublic = !project.isPublic;
+    await project.save();
+
+    res.json({
+      message: 'Project visibility updated',
+      isPublic: project.isPublic
+    });
+  } catch (error) {
+    console.error('Toggle visibility error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -505,21 +485,6 @@ router.delete('/:id/collaborators/:userId', protect, checkProjectAccess, checkEd
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
-  }
-});
-
-// Toggle project visibility
-router.patch('/:id/visibility', protect, checkProjectAccess, checkEditAccess, async (req, res) => {
-  try {
-    req.project.isPublic = !req.project.isPublic;
-    await req.project.save();
-    
-    res.json({
-      success: true,
-      data: req.project
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

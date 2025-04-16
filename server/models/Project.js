@@ -3,20 +3,18 @@ const mongoose = require('mongoose');
 const ProjectSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Please provide a project name'],
-    trim: true,
-    maxlength: [100, 'Project name cannot be more than 100 characters']
+    required: [true, 'Project name is required'],
+    trim: true
   },
   description: {
     type: String,
-    required: [true, 'Please provide a project description'],
-    trim: true,
-    maxlength: [1000, 'Project description cannot be more than 1000 characters']
+    required: [true, 'Project description is required'],
+    trim: true
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: [true, 'Project owner is required']
   },
   isPublic: {
     type: Boolean,
@@ -24,64 +22,59 @@ const ProjectSchema = new mongoose.Schema({
   },
   tokenName: {
     type: String,
-    required: [true, 'Please provide a token name'],
-    trim: true,
-    maxlength: [50, 'Token name cannot be more than 50 characters']
+    required: [true, 'Token name is required'],
+    trim: true
   },
   tokenSymbol: {
     type: String,
-    required: [true, 'Please provide a token symbol'],
+    required: [true, 'Token symbol is required'],
     trim: true,
-    maxlength: [10, 'Token symbol cannot be more than 10 characters']
+    uppercase: true
   },
   tokenomics: {
     totalSupply: {
       type: Number,
-      required: [true, 'Please provide a total supply'],
-      min: [0, 'Total supply cannot be negative']
+      required: [true, 'Total supply is required'],
+      min: [0, 'Total supply must be positive']
     },
     initialPrice: {
       type: Number,
-      required: [true, 'Please provide an initial price'],
-      min: [0, 'Initial price cannot be negative']
+      required: [true, 'Initial price is required'],
+      min: [0, 'Initial price must be positive']
     },
     maxSupply: {
       type: Number,
-      required: [true, 'Please provide a max supply'],
-      min: [0, 'Max supply cannot be negative']
+      required: [true, 'Max supply is required'],
+      min: [0, 'Max supply must be positive']
     },
     decimals: {
       type: Number,
-      required: [true, 'Please provide decimals'],
-      min: [0, 'Decimals cannot be negative'],
-      max: [18, 'Decimals cannot be more than 18'],
-      default: 18
+      required: [true, 'Decimals is required'],
+      min: [0, 'Decimals must be positive'],
+      max: [18, 'Decimals cannot exceed 18']
     },
     allocation: {
       type: Map,
       of: {
         percentage: {
           type: Number,
-          required: true,
-          min: [0, 'Percentage cannot be negative'],
-          max: [100, 'Percentage cannot be more than 100']
+          required: [true, 'Allocation percentage is required'],
+          min: [0, 'Allocation percentage must be positive'],
+          max: [100, 'Allocation percentage cannot exceed 100']
         },
         amount: {
           type: Number,
-          required: true,
-          min: [0, 'Amount cannot be negative']
+          required: [true, 'Allocation amount is required'],
+          min: [0, 'Allocation amount must be positive']
         }
       },
-      required: [true, 'Please provide allocation data'],
       validate: {
         validator: function(allocation) {
-          // Calculate total allocation
           const total = Array.from(allocation.values())
-            .reduce((sum, value) => sum + value.percentage, 0);
-          // Check if total is 100%
-          return Math.abs(total - 100) < 0.01;
+            .reduce((sum, { percentage }) => sum + percentage, 0);
+          return Math.abs(total - 100) < 0.01; // Allow for small floating point differences
         },
-        message: 'Total allocation must be 100%'
+        message: 'Total allocation must equal 100%'
       }
     }
   },
@@ -90,87 +83,60 @@ const ProjectSchema = new mongoose.Schema({
     of: {
       tgePercentage: {
         type: Number,
-        required: [true, 'Please provide TGE percentage'],
-        min: [0, 'TGE percentage cannot be negative'],
-        max: [100, 'TGE percentage cannot be more than 100']
+        required: [true, 'TGE percentage is required'],
+        min: [0, 'TGE percentage must be positive'],
+        max: [100, 'TGE percentage cannot exceed 100']
       },
       cliffMonths: {
         type: Number,
-        required: [true, 'Please provide cliff months'],
-        min: [0, 'Cliff months cannot be negative']
+        required: [true, 'Cliff months is required'],
+        min: [0, 'Cliff months must be positive']
       },
       vestingMonths: {
         type: Number,
-        required: [true, 'Please provide vesting months'],
-        min: [1, 'Vesting months must be at least 1']
+        required: [true, 'Vesting months is required'],
+        min: [0, 'Vesting months must be positive']
       }
     }
   },
   collaborators: [{
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: 'User',
+      required: true
     },
     role: {
       type: String,
       enum: ['viewer', 'editor'],
       default: 'viewer'
     }
-  }],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
+  }]
+}, {
+  timestamps: true
 });
 
-// Update the updatedAt field before saving
-ProjectSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+// Add method to check if a user has access to the project
+ProjectSchema.methods.hasAccess = function(userId) {
+  if (this.isPublic) return true;
   
-  // Ensure owner is a valid ObjectId
-  if (this.owner && typeof this.owner === 'string') {
-    try {
-      this.owner = new mongoose.Types.ObjectId(this.owner);
-    } catch (err) {
-      // Continue anyway, Mongoose will handle validation errors
-    }
-  }
+  const ownerId = this.owner._id ? this.owner._id.toString() : this.owner.toString();
+  if (ownerId === userId) return true;
   
-  // Ensure each collaborator.user is a valid ObjectId
-  if (this.collaborators && this.collaborators.length > 0) {
-    this.collaborators = this.collaborators.filter(collab => {
-      // Remove any collaborator entries with null/undefined user
-      if (!collab || !collab.user) return false;
-      
-      // Try to convert string IDs to ObjectId
-      if (typeof collab.user === 'string') {
-        try {
-          collab.user = new mongoose.Types.ObjectId(collab.user);
-        } catch (err) {
-          return false; // Remove this collaborator if ID is invalid
-        }
-      }
-      
-      return true;
-    });
-  }
-  
-  next();
-});
+  return this.collaborators.some(collab => {
+    const collabUserId = collab.user._id ? collab.user._id.toString() : collab.user.toString();
+    return collabUserId === userId;
+  });
+};
 
-// Update the updatedAt field before updating
-ProjectSchema.pre('findOneAndUpdate', function(next) {
-  this.set({ updatedAt: Date.now() });
-  next();
-});
-
-// Add deleteProject method
-ProjectSchema.methods.deleteProject = async function() {
-  return this.deleteOne();
+// Add method to check if a user can edit the project
+ProjectSchema.methods.canEdit = function(userId) {
+  const ownerId = this.owner._id ? this.owner._id.toString() : this.owner.toString();
+  if (ownerId === userId) return true;
+  
+  return this.collaborators.some(collab => {
+    const collabUserId = collab.user._id ? collab.user._id.toString() : collab.user.toString();
+    return collabUserId === userId && collab.role === 'editor';
+  });
 };
 
 module.exports = mongoose.model('Project', ProjectSchema); 
