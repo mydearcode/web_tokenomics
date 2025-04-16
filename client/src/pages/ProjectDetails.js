@@ -46,17 +46,10 @@ const ProjectDetails = () => {
         });
         setError(null);
       } catch (err) {
-        console.error('Error fetching project:', err);
-        if (err.message === 'Invalid project ID') {
-          setError('Invalid project ID');
-        } else if (err.message === 'Authentication required') {
-          setError('Please log in to view this project');
-        } else if (err.message === 'Not authorized to access this project') {
-          setError('You do not have permission to view this project');
-        } else if (err.message === 'Project not found') {
-          setError('Project not found');
-        } else {
-          setError(err.message || 'Failed to load project details');
+        setError(err.message);
+        if (err.message.includes('Authentication required')) {
+          // Don't show error message for auth required, just let the user see the login prompt
+          setError(null);
         }
       } finally {
         setLoading(false);

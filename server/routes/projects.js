@@ -50,30 +50,45 @@ router.get('/:id', async (req, res) => {
     // For private projects, check authentication
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
-      return res.status(401).json({ message: 'Authentication required' });
+      return res.status(401).json({ 
+        message: 'Authentication required',
+        details: 'This project is private. Please log in to view it.'
+      });
     }
 
     // Verify token and get user
     const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id);
 
-    if (!req.user) {
-      return res.status(401).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(401).json({ 
+        message: 'User not found',
+        details: 'The user associated with this token was not found.'
+      });
     }
 
     // Check if user has access
-    if (!project.hasAccess(req.user._id)) {
-      return res.status(403).json({ message: 'Not authorized to access this project' });
+    if (!project.hasAccess(user._id)) {
+      return res.status(403).json({ 
+        message: 'Not authorized',
+        details: 'You do not have permission to access this project.'
+      });
     }
 
     res.json(project);
   } catch (error) {
     console.error('Get project error:', error);
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ message: 'Invalid token' });
+      return res.status(401).json({ 
+        message: 'Invalid token',
+        details: 'The authentication token is invalid or expired.'
+      });
     }
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      details: 'An unexpected error occurred while fetching the project.'
+    });
   }
 });
 

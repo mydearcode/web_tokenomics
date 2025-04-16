@@ -256,33 +256,22 @@ export const getProjects = async () => {
 
 export const getProject = async (id) => {
   try {
-    console.log('Fetching project:', id);
-    const token = localStorage.getItem('token');
-    
-    // Try to get the project (will work for both public and private if authenticated)
-    try {
-      const response = await api.get(`/api/projects/${id}`);
-      console.log('Project response:', response.data);
-      return response.data;
-    } catch (error) {
-      // If unauthorized and not a different error, project might be private
-      if (error.response?.status === 401) {
-        throw new Error('Authentication required');
-      }
-      throw error;
-    }
+    const response = await api.get(`/projects/${id}`);
+    return response.data;
   } catch (error) {
-    console.error('Get project error:', error.response?.data || error.message);
-    if (error.response?.status === 400) {
-      throw new Error('Invalid project ID');
-    } else if (error.response?.status === 401) {
-      throw new Error('Authentication required');
-    } else if (error.response?.status === 403) {
-      throw new Error('Not authorized to access this project');
-    } else if (error.response?.status === 404) {
-      throw new Error('Project not found');
+    if (error.response) {
+      const { status, data } = error.response;
+      if (status === 401) {
+        throw new Error(data.details || 'Authentication required to view this project');
+      } else if (status === 403) {
+        throw new Error(data.details || 'You do not have permission to view this project');
+      } else if (status === 404) {
+        throw new Error('Project not found');
+      } else {
+        throw new Error(data.details || 'Failed to fetch project');
+      }
     } else {
-      throw new Error('Failed to load project');
+      throw new Error('Network error while fetching project');
     }
   }
 };
