@@ -109,63 +109,41 @@ function App() {
   return (
     <>
       <CssBaseline />
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100vh',
-        }}
-      >
-        <Navbar />
-        <Box component="main" sx={{ flexGrow: 1, py: 3 }}>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/projects/create"
-              element={
-                <ProtectedRoute>
-                  <ProjectCreate />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/projects/:id/edit"
-              element={
-                <EditorRoute>
-                  <ProjectEdit />
-                </EditorRoute>
-              }
-            />
-            <Route
-              path="/projects/:id"
-              element={
-                <ProtectedRoute>
-                  <ProjectDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Box>
-        <Footer />
+      <Navbar />
+      <Box sx={{ minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Public project route */}
+          <Route path="/project/:id" element={<ProjectDetails />} />
+          
+          {/* Protected routes */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/project/create" element={
+            <ProtectedRoute>
+              <ProjectCreate />
+            </ProtectedRoute>
+          } />
+          <Route path="/project/:id/edit" element={
+            <EditorRoute>
+              <ProjectEdit />
+            </EditorRoute>
+          } />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </Box>
+      <Footer />
     </>
   );
 }

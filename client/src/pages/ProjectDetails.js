@@ -21,10 +21,12 @@ import { getProject, getPublicProject } from '../services/api';
 import AllocationChart from '../components/AllocationChart';
 import VestingScheduleChart from '../components/VestingScheduleChart';
 import ProjectActions from '../components/ProjectActions';
+import { useAuth } from '../context/AuthContext';
 
 const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,11 +39,16 @@ const ProjectDetails = () => {
         // First try to get the project as a public project
         try {
           response = await getPublicProject(id);
+          setProject(response);
         } catch (err) {
-          // If public project fails, try authenticated route
-          response = await getProject(id);
+          // If public project fails and user is logged in, try authenticated route
+          if (user) {
+            response = await getProject(id);
+            setProject(response);
+          } else {
+            throw new Error('This project is not public. Please login to view it.');
+          }
         }
-        setProject(response);
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -50,7 +57,7 @@ const ProjectDetails = () => {
     };
 
     fetchProject();
-  }, [id]);
+  }, [id, user]);
 
   const handleShare = async () => {
     try {
@@ -82,11 +89,20 @@ const ProjectDetails = () => {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Typography color="error">{error}</Typography>
+        {!user && (
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => navigate('/login')}
+            sx={{ mt: 2 }}
+          >
+            Login to View
+          </Button>
+        )}
         <Button 
-          variant="contained" 
-          color="primary" 
+          variant="outlined" 
           onClick={() => navigate('/')}
-          sx={{ mt: 2 }}
+          sx={{ mt: 2, ml: 2 }}
         >
           Back to Home
         </Button>
@@ -125,7 +141,7 @@ const ProjectDetails = () => {
             >
               Share Project
             </Button>
-            <ProjectActions project={project} />
+            {user && <ProjectActions project={project} />}
           </Box>
         </Box>
 
@@ -146,11 +162,11 @@ const ProjectDetails = () => {
               <Grid container spacing={2}>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2">Token Name</Typography>
-                  <Typography>{project.tokenomics.name}</Typography>
+                  <Typography>{project.tokenName}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2">Token Symbol</Typography>
-                  <Typography>{project.tokenomics.symbol}</Typography>
+                  <Typography>{project.tokenSymbol}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2">Total Supply</Typography>
