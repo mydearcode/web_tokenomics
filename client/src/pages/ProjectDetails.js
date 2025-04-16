@@ -1,95 +1,94 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Box,
-  Typography,
-  Grid,
-  Paper,
-  CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  Snackbar,
-  Alert,
-} from '@mui/material';
-import { getProject, getPublicProject } from '../services/api';
-import AllocationChart from '../components/AllocationChart';
-import VestingScheduleChart from '../components/VestingScheduleChart';
-import ProjectActions from '../components/ProjectActions';
 import { useAuth } from '../context/AuthContext';
+import { getProject, updateProject } from '../services/api';
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  CircularProgress,
+  Alert,
+  Paper,
+  Grid,
+  Divider,
+  IconButton,
+  Tooltip
+} from '@mui/material';
+import { Edit as EditIcon, Lock as LockIcon, Public as PublicIcon } from '@mui/icons-material';
 
 const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        let response;
-        // If user is logged in, try authenticated route first
-        if (user) {
-          try {
-            response = await getProject(id);
-            setProject(response);
-            setLoading(false);
-            return;
-          } catch (err) {
-            console.log('Authenticated route failed, trying public route...');
-          }
-        }
-        
-        // Try public route
-        try {
-          response = await getPublicProject(id);
-          setProject(response);
-        } catch (err) {
-          if (user) {
-            throw new Error('You do not have access to this project.');
-          } else {
-            throw new Error('This project is not public. Please login to view it.');
-          }
-        }
-        setLoading(false);
+        setLoading(true);
+        const data = await getProject(id);
+        setProject(data);
+        setError(null);
       } catch (err) {
-        setError(err.message);
+        if (err.response?.status === 401) {
+          setError('Please log in to view this project');
+        } else if (err.response?.status === 403) {
+          setError('You do not have permission to view this project');
+        } else {
+          setError('Failed to load project details');
+        }
+      } finally {
         setLoading(false);
       }
     };
 
     fetchProject();
-  }, [id, user]);
+  }, [id]);
 
-  const handleShare = async () => {
+  const handleEdit = () => {
+    if (!isAuthenticated) {
+      setError('Please log in to edit this project');
+      return;
+    }
+
+    if (!project.canEdit(user._id)) {
+      setError('You do not have permission to edit this project');
+      return;
+    }
+
+    setIsEditing(true);
+  };
+
+  const handleSave = async (updatedData) => {
     try {
-      const shareUrl = `${window.location.origin}/project/${id}`;
-      await navigator.clipboard.writeText(shareUrl);
-      setSnackbar({
-        open: true,
-        message: 'Project URL copied to clipboard!',
-        severity: 'success'
-      });
+      const updatedProject = await updateProject(id, updatedData);
+      setProject(updatedProject);
+      setIsEditing(false);
+      setError(null);
     } catch (err) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to copy URL',
-        severity: 'error'
+      setError('Failed to update project');
+    }
+  };
+
+  const handleToggleVisibility = async () => {
+    try {
+      const updatedProject = await updateProject(id, {
+        ...project,
+        isPublic: !project.isPublic
       });
+      setProject(updatedProject);
+    } catch (err) {
+      setError('Failed to update project visibility');
     }
   };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
         <CircularProgress />
       </Box>
     );
@@ -97,168 +96,135 @@ const ProjectDetails = () => {
 
   if (error) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography color="error">{error}</Typography>
-        {!user && (
-          <Button 
-            variant="contained" 
-            color="primary" 
-            onClick={() => navigate('/login')}
-            sx={{ mt: 2 }}
-          >
-            Login to View
-          </Button>
-        )}
-        <Button 
-          variant="outlined" 
-          onClick={() => navigate('/')}
-          sx={{ mt: 2, ml: 2 }}
-        >
-          Back to Home
-        </Button>
-      </Box>
+      <Container maxWidth="md">
+        <Alert severity="error" sx={{ mt: 4 }}>
+          {error}
+          {!isAuthenticated && (
+            <Button
+              color="primary"
+              variant="contained"
+              sx={{ ml: 2 }}
+              onClick={() => navigate('/login')}
+            >
+              Log In
+            </Button>
+          )}
+        </Alert>
+      </Container>
     );
   }
 
   if (!project) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography>Project not found</Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={() => navigate('/')}
-          sx={{ mt: 2 }}
-        >
-          Back to Home
-        </Button>
-      </Box>
+      <Container maxWidth="md">
+        <Alert severity="error" sx={{ mt: 4 }}>
+          Project not found
+        </Alert>
+      </Container>
     );
   }
 
   return (
-    <Container maxWidth="xl">
-      <Box sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
             {project.name}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button 
-              variant="outlined" 
-              onClick={handleShare}
-              disabled={!project.isPublic}
-            >
-              Share Project
-            </Button>
-            {user && <ProjectActions project={project} />}
+          <Box>
+            {isAuthenticated && project.canEdit(user._id) && (
+              <>
+                <Tooltip title={project.isPublic ? "Make Private" : "Make Public"}>
+                  <IconButton onClick={handleToggleVisibility} color="primary">
+                    {project.isPublic ? <PublicIcon /> : <LockIcon />}
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Edit Project">
+                  <IconButton onClick={handleEdit} color="primary">
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
           </Box>
         </Box>
 
-        {!project.isPublic && (
-          <Alert severity="info" sx={{ mb: 3 }}>
-            This project is private. Only you can view it.
-          </Alert>
-        )}
-
-        <Typography variant="body1" paragraph>
+        <Typography variant="subtitle1" color="text.secondary" paragraph>
           {project.description}
         </Typography>
 
+        <Divider sx={{ my: 3 }} />
+
         <Grid container spacing={4}>
           <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" gutterBottom>Token Information</Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Token Name</Typography>
-                  <Typography>{project.tokenName}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Token Symbol</Typography>
-                  <Typography>{project.tokenSymbol}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Total Supply</Typography>
-                  <Typography>{project.tokenomics.totalSupply.toLocaleString()}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Initial Price</Typography>
-                  <Typography>${project.tokenomics.initialPrice}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Max Supply</Typography>
-                  <Typography>{project.tokenomics.maxSupply.toLocaleString()}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Decimals</Typography>
-                  <Typography>{project.tokenomics.decimals}</Typography>
-                </Grid>
-              </Grid>
-            </Paper>
+            <Typography variant="h6" gutterBottom>
+              Token Information
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body1">
+                <strong>Token Name:</strong> {project.tokenName}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Token Symbol:</strong> {project.tokenSymbol}
+              </Typography>
+            </Box>
+
+            <Typography variant="h6" gutterBottom>
+              Tokenomics
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body1">
+                <strong>Total Supply:</strong> {project.tokenomics.totalSupply.toLocaleString()}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Initial Price:</strong> ${project.tokenomics.initialPrice}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Max Supply:</strong> {project.tokenomics.maxSupply.toLocaleString()}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Decimals:</strong> {project.tokenomics.decimals}
+              </Typography>
+            </Box>
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" gutterBottom>Token Allocation</Typography>
-              <AllocationChart data={project.tokenomics.allocation} />
-              <TableContainer component={Paper} sx={{ mt: 3 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Category</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell align="right">Percentage</TableCell>
-                      <TableCell align="center">Vesting Details</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {Object.entries(project.tokenomics.allocation).map(([category, data]) => {
-                      const vestingInfo = project.vesting[category] || {};
-                      return (
-                        <TableRow key={category}>
-                          <TableCell component="th" scope="row">
-                            {category.charAt(0).toUpperCase() + category.slice(1)}
-                          </TableCell>
-                          <TableCell align="right">
-                            {data.amount.toLocaleString()}
-                          </TableCell>
-                          <TableCell align="right">{data.percentage}%</TableCell>
-                          <TableCell align="center">
-                            {vestingInfo.tgePercentage !== undefined ? (
-                              `(TGE: ${vestingInfo.tgePercentage}% - Cliff: ${vestingInfo.cliffMonths} months - Vesting: ${vestingInfo.vestingMonths} months)`
-                            ) : (
-                              'No vesting schedule'
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          </Grid>
-
-          <Grid item xs={12}>
-            <VestingScheduleChart project={project} />
+            <Typography variant="h6" gutterBottom>
+              Allocation
+            </Typography>
+            {Object.entries(project.tokenomics.allocation).map(([category, data]) => (
+              <Box key={category} sx={{ mb: 2 }}>
+                <Typography variant="subtitle1">
+                  {category}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Percentage:</strong> {data.percentage}%
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Amount:</strong> {data.amount.toLocaleString()}
+                </Typography>
+              </Box>
+            ))}
           </Grid>
         </Grid>
-      </Box>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+        <Divider sx={{ my: 3 }} />
+
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Project Details
+          </Typography>
+          <Typography variant="body1">
+            <strong>Created by:</strong> {project.owner.name}
+          </Typography>
+          <Typography variant="body1">
+            <strong>Visibility:</strong> {project.isPublic ? 'Public' : 'Private'}
+          </Typography>
+          <Typography variant="body1">
+            <strong>Created at:</strong> {new Date(project.createdAt).toLocaleDateString()}
+          </Typography>
+        </Box>
+      </Paper>
     </Container>
   );
 };
