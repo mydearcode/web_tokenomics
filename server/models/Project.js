@@ -119,23 +119,27 @@ const ProjectSchema = new mongoose.Schema({
 ProjectSchema.methods.hasAccess = function(userId) {
   if (this.isPublic) return true;
   
+  if (!userId) return false;
+  
   const ownerId = this.owner._id ? this.owner._id.toString() : this.owner.toString();
-  if (ownerId === userId) return true;
+  if (ownerId === userId.toString()) return true;
   
   return this.collaborators.some(collab => {
     const collabUserId = collab.user._id ? collab.user._id.toString() : collab.user.toString();
-    return collabUserId === userId;
+    return collabUserId === userId.toString();
   });
 };
 
 // Add method to check if a user can edit the project
 ProjectSchema.methods.canEdit = function(userId) {
+  if (!userId) return false;
+  
   const ownerId = this.owner._id ? this.owner._id.toString() : this.owner.toString();
-  if (ownerId === userId) return true;
+  if (ownerId === userId.toString()) return true;
   
   return this.collaborators.some(collab => {
     const collabUserId = collab.user._id ? collab.user._id.toString() : collab.user.toString();
-    return collabUserId === userId && collab.role === 'editor';
+    return collabUserId === userId.toString() && collab.role === 'editor';
   });
 };
 

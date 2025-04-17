@@ -11,12 +11,16 @@ dotenv.config();
 const app = express();
 
 // CORS configuration
-app.use(cors({
-  origin: 'http://localhost:3000', // Frontend uygulamanızın adresi
-  credentials: true, // Cookie'lerin gönderilmesine izin ver
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // İzin verilen HTTP metodları
-  allowedHeaders: ['Content-Type', 'Authorization'] // İzin verilen başlıklar
-}));
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://tokenomics-web.onrender.com', 'http://localhost:3000']
+    : 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 
 // Middleware
 app.use(express.json());
@@ -27,8 +31,12 @@ app.get('/api/health', (req, res) => {
 });
 
 // Connect to MongoDB
+const MONGODB_URI = process.env.NODE_ENV === 'production'
+  ? process.env.MONGODB_URI
+  : 'mongodb://localhost:27017/tokenomics-web';
+
 mongoose
-  .connect('mongodb://localhost:27017/tokenomics-web')
+  .connect(MONGODB_URI)
   .then(() => console.log('MongoDB Connected'))
   .catch((err) => {
     console.error('MongoDB connection error:', err);
@@ -60,7 +68,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Start server
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 

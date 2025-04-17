@@ -31,7 +31,10 @@ router.get('/:id', async (req, res) => {
   try {
     // Validate project ID
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid project ID' });
+      return res.status(400).json({ 
+        message: 'Invalid project ID',
+        details: 'The provided project ID is not valid'
+      });
     }
 
     const project = await Project.findById(req.params.id)
@@ -39,7 +42,10 @@ router.get('/:id', async (req, res) => {
       .populate('collaborators.user', 'name email');
     
     if (!project) {
-      return res.status(404).json({ message: 'Project not found' });
+      return res.status(404).json({ 
+        message: 'Project not found',
+        details: 'The requested project does not exist'
+      });
     }
 
     // If project is public, return it
@@ -56,35 +62,39 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Verify token and get user
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
+    try {
+      // Verify token and get user
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id);
 
-    if (!user) {
-      return res.status(401).json({ 
-        message: 'User not found',
-        details: 'The user associated with this token was not found.'
-      });
+      if (!user) {
+        return res.status(401).json({ 
+          message: 'User not found',
+          details: 'The user associated with this token was not found.'
+        });
+      }
+
+      // Check if user has access
+      if (!project.hasAccess(user._id)) {
+        return res.status(403).json({ 
+          message: 'Not authorized',
+          details: 'You do not have permission to access this project.'
+        });
+      }
+
+      res.json(project);
+    } catch (jwtError) {
+      if (jwtError.name === 'JsonWebTokenError') {
+        return res.status(401).json({ 
+          message: 'Invalid token',
+          details: 'The authentication token is invalid or expired.'
+        });
+      }
+      throw jwtError;
     }
-
-    // Check if user has access
-    if (!project.hasAccess(user._id)) {
-      return res.status(403).json({ 
-        message: 'Not authorized',
-        details: 'You do not have permission to access this project.'
-      });
-    }
-
-    res.json(project);
   } catch (error) {
     console.error('Get project error:', error);
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ 
-        message: 'Invalid token',
-        details: 'The authentication token is invalid or expired.'
-      });
-    }
     res.status(500).json({ 
       message: 'Server error',
       details: 'An unexpected error occurred while fetching the project.'

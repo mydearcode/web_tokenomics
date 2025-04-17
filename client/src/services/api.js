@@ -22,11 +22,6 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('Token added to request:', {
-        url: config.url,
-        method: config.method,
-        token: token.substring(0, 10) + '...'
-      });
     }
     return config;
   },
@@ -41,21 +36,20 @@ api.interceptors.response.use(
   (error) => {
     if (error.response) {
       // Server responded with error
-      const message = error.response.data.message || 'An error occurred';
-      console.error('API Error:', {
-        status: error.response.status,
-        message: message,
-        data: error.response.data
-      });
+      const { status, data } = error.response;
+      let message = data.message || 'An error occurred';
+      
+      if (data.details) {
+        message = `${message}: ${data.details}`;
+      }
+      
       return Promise.reject(new Error(message));
     } else if (error.request) {
       // Request made but no response
-      console.error('No response from server:', error.request);
-      return Promise.reject(new Error('No response from server'));
+      return Promise.reject(new Error('No response from server. Please check your internet connection.'));
     } else {
       // Request setup error
-      console.error('Request setup error:', error.message);
-      return Promise.reject(new Error('Error setting up request'));
+      return Promise.reject(new Error('Error setting up request. Please try again.'));
     }
   }
 );
@@ -256,7 +250,7 @@ export const getProjects = async () => {
 
 export const getProject = async (id) => {
   try {
-    const response = await api.get(`/projects/${id}`);
+    const response = await api.get(`/api/projects/${id}`);
     return response.data;
   } catch (error) {
     if (error.response) {
@@ -266,7 +260,7 @@ export const getProject = async (id) => {
       } else if (status === 403) {
         throw new Error(data.details || 'You do not have permission to view this project');
       } else if (status === 404) {
-        throw new Error('Project not found');
+        throw new Error(data.details || 'Project not found');
       } else {
         throw new Error(data.details || 'Failed to fetch project');
       }
