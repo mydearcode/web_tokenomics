@@ -30,13 +30,15 @@ const ProjectDetails = () => {
     const fetchProject = async () => {
       try {
         setLoading(true);
+        console.log('Fetching project with ID:', id);
         const data = await getProject(id);
+        console.log('Project data received:', data);
         setProject(data);
         setError(null);
       } catch (err) {
+        console.error('Error fetching project:', err);
         setError(err.message);
         if (err.message.includes('Authentication required')) {
-          // Don't show error message for auth required, just let the user see the login prompt
           setError(null);
         }
       } finally {

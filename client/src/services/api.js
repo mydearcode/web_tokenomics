@@ -250,22 +250,32 @@ export const getProjects = async () => {
 
 export const getProject = async (id) => {
   try {
-    const response = await api.get(`/api/projects/${id}`);
+    console.log('Making API call to get project:', id);
+    const response = await api.get(`/projects/${id}`);
+    console.log('API response:', response);
     return response.data;
   } catch (error) {
+    console.error('API error details:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    
     if (error.response) {
-      const { status, data } = error.response;
-      if (status === 401) {
-        throw new Error(data.details || 'Authentication required to view this project');
-      } else if (status === 403) {
-        throw new Error(data.details || 'You do not have permission to view this project');
-      } else if (status === 404) {
-        throw new Error(data.details || 'Project not found');
-      } else {
-        throw new Error(data.details || 'Failed to fetch project');
+      switch (error.response.status) {
+        case 401:
+          throw new Error('Authentication required');
+        case 403:
+          throw new Error('You do not have permission to view this project');
+        case 404:
+          throw new Error('Project not found');
+        default:
+          throw new Error(error.response.data?.message || 'Failed to fetch project');
       }
+    } else if (error.request) {
+      throw new Error('Server is not responding. Please check your internet connection');
     } else {
-      throw new Error('Network error while fetching project');
+      throw new Error('An error occurred while fetching the project');
     }
   }
 };
