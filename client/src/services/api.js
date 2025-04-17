@@ -164,14 +164,46 @@ export const createProject = async (projectData) => {
 
 export const getProjects = async () => {
   try {
+    console.log('Fetching projects...');
     const response = await api.get('/api/projects');
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data?.message || 'Failed to fetch projects');
-    } else {
-      throw new Error('Network error while fetching projects');
+    console.log('Projects response:', response);
+    
+    // Log the structure of the response
+    console.log('Response structure:', {
+      hasData: 'data' in response.data,
+      hasSuccess: 'success' in response.data,
+      keys: Object.keys(response.data)
+    });
+    
+    // Handle different response structures
+    let projects = [];
+    if (response.data?.data) {
+      // If response has data.data structure
+      projects = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      // If response is directly an array
+      projects = response.data;
+    } else if (response.data?.projects) {
+      // If response has data.projects structure
+      projects = response.data.projects;
     }
+    
+    console.log('Extracted projects:', projects);
+    
+    return {
+      data: projects,
+      success: true
+    };
+  } catch (error) {
+    console.error('Get projects error:', error.response?.data || error.message);
+    // If the error is 404 (not found), return an empty array
+    if (error.response?.status === 404) {
+      return {
+        data: [],
+        success: true
+      };
+    }
+    throw error;
   }
 };
 
