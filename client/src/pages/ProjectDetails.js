@@ -31,19 +31,7 @@ const ProjectDetails = () => {
       try {
         setLoading(true);
         const data = await getProject(id);
-        
-        // Check if user has edit permissions
-        const canEdit = isAuthenticated && (
-          data.owner._id === user?._id || 
-          data.collaborators?.some(collab => 
-            collab.user._id === user?._id && collab.role === 'editor'
-          )
-        );
-
-        setProject({
-          ...data,
-          canEdit: () => canEdit
-        });
+        setProject(data);
         setError(null);
       } catch (err) {
         setError(err.message);
@@ -57,7 +45,7 @@ const ProjectDetails = () => {
     };
 
     fetchProject();
-  }, [id, isAuthenticated, user?._id]);
+  }, [id]);
 
   const handleEdit = () => {
     if (!isAuthenticated) {
@@ -121,7 +109,7 @@ const ProjectDetails = () => {
       <Container maxWidth="md">
         <Alert severity="error" sx={{ mt: 4 }}>
           {error}
-          {!isAuthenticated && error === 'Please log in to view this project' && (
+          {!isAuthenticated && error.includes('Authentication required') && (
             <Button
               color="primary"
               variant="contained"
@@ -153,6 +141,21 @@ const ProjectDetails = () => {
           <Typography variant="h4" component="h1">
             {project.name}
           </Typography>
+          {!isAuthenticated && project.isPrivate && (
+            <Box>
+              <Alert severity="info">
+                This is a private project. Please log in to view it.
+                <Button
+                  color="primary"
+                  variant="contained"
+                  sx={{ ml: 2 }}
+                  onClick={() => navigate('/login')}
+                >
+                  Log In
+                </Button>
+              </Alert>
+            </Box>
+          )}
           <Box>
             {isAuthenticated && project.canEdit() && (
               <>
