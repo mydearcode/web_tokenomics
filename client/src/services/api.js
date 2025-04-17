@@ -151,107 +151,34 @@ export const changePassword = async (passwordData) => {
 // Project endpoints
 export const createProject = async (projectData) => {
   try {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const token = localStorage.getItem('token');
-
-    if (!user || !token) {
-      throw new Error('User not authenticated');
-    }
-
-    // Format project data according to API expectations
-    const formattedData = {
-      name: projectData.name.trim(),
-      description: projectData.description.trim(),
-      isPublic: projectData.isPublic || false,
-      tokenName: projectData.tokenomics.name.trim(),
-      tokenSymbol: projectData.tokenomics.symbol.trim(),
-      tokenomics: {
-        totalSupply: Number(projectData.tokenomics.totalSupply),
-        initialPrice: Number(projectData.tokenomics.initialPrice),
-        maxSupply: Number(projectData.tokenomics.maxSupply),
-        decimals: Number(projectData.tokenomics.decimals),
-        allocation: Object.entries(projectData.tokenomics.allocation).reduce((acc, [key, value]) => {
-          if (value.percentage > 0) {
-            acc[key] = {
-              percentage: Number(value.percentage),
-              amount: Number(value.amount)
-            };
-          }
-          return acc;
-        }, {})
-      },
-      vesting: Object.entries(projectData.vesting).reduce((acc, [key, value]) => {
-        if (projectData.tokenomics.allocation[key]?.percentage > 0) {
-          acc[key] = {
-            tgePercentage: Number(value.tgePercentage || 0),
-            cliffMonths: Number(value.cliffMonths || 0),
-            vestingMonths: Number(value.vestingMonths || 0)
-          };
-        }
-        return acc;
-      }, {})
-    };
-
-    // Log the formatted data for debugging
-    console.log('Sending project data to API:', JSON.stringify(formattedData, null, 2));
-
-    const response = await api.post('/api/projects', formattedData);
-    return response;
+    const response = await api.post('/api/projects', projectData);
+    return response.data;
   } catch (error) {
-    console.error('Error creating project:', error);
-    throw error;
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Failed to create project');
+    } else {
+      throw new Error('Network error while creating project');
+    }
   }
 };
 
 export const getProjects = async () => {
   try {
-    console.log('Fetching projects');
     const response = await api.get('/api/projects');
-    console.log('Projects response:', response.data);
-    
-    // Log the structure of the response
-    console.log('Response structure:', {
-      hasData: 'data' in response.data,
-      hasSuccess: 'success' in response.data,
-      keys: Object.keys(response.data)
-    });
-    
-    // Handle different response structures
-    let projects = [];
-    if (response.data?.data) {
-      // If response has data.data structure
-      projects = response.data.data;
-    } else if (Array.isArray(response.data)) {
-      // If response is directly an array
-      projects = response.data;
-    } else if (response.data?.projects) {
-      // If response has data.projects structure
-      projects = response.data.projects;
-    }
-    
-    console.log('Extracted projects:', projects);
-    
-    return {
-      data: projects,
-      success: true
-    };
+    return response.data;
   } catch (error) {
-    console.error('Get projects error:', error.response?.data || error.message);
-    // If the error is 404 (not found), return an empty array
-    if (error.response?.status === 404) {
-      return {
-        data: [],
-        success: true
-      };
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Failed to fetch projects');
+    } else {
+      throw new Error('Network error while fetching projects');
     }
-    throw error;
   }
 };
 
 export const getProject = async (id) => {
   try {
     console.log('Making API call to get project:', id);
-    const response = await api.get(`/projects/${id}`);
+    const response = await api.get(`/api/projects/${id}`);
     console.log('API response:', response);
     return response.data;
   } catch (error) {
@@ -282,68 +209,27 @@ export const getProject = async (id) => {
 
 export const updateProject = async (id, projectData) => {
   try {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const token = localStorage.getItem('token');
-
-    if (!user || !token) {
-      throw new Error('User not authenticated');
-    }
-
-    // Format project data
-    const formattedData = {
-      name: projectData.name.trim(),
-      description: projectData.description.trim(),
-      isPublic: projectData.isPublic || false,
-      tokenName: projectData.tokenomics.name.trim(),
-      tokenSymbol: projectData.tokenomics.symbol.trim(),
-      tokenomics: {
-        totalSupply: Number(projectData.tokenomics.totalSupply),
-        initialPrice: Number(projectData.tokenomics.initialPrice),
-        maxSupply: Number(projectData.tokenomics.maxSupply),
-        decimals: Number(projectData.tokenomics.decimals),
-        allocation: Object.entries(projectData.tokenomics.allocation).reduce((acc, [key, value]) => {
-          if (value.percentage > 0) {
-            acc[key] = {
-              percentage: Number(value.percentage),
-              amount: Number(value.amount)
-            };
-          }
-          return acc;
-        }, {})
-      },
-      vesting: Object.entries(projectData.vesting).reduce((acc, [key, value]) => {
-        if (projectData.tokenomics.allocation[key]?.percentage > 0) {
-          acc[key] = {
-            tgePercentage: Number(value.tgePercentage || 0),
-            cliffMonths: Number(value.cliffMonths || 0),
-            vestingMonths: Number(value.vestingMonths || 0)
-          };
-        }
-        return acc;
-      }, {})
-    };
-
-    console.log('Formatted project data:', formattedData);
-
-    const response = await api.put(`/api/projects/${id}`, formattedData);
+    const response = await api.put(`/api/projects/${id}`, projectData);
     return response.data;
   } catch (error) {
-    console.error('Error updating project:', error);
-    if (error.response?.status === 401) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Failed to update project');
+    } else {
+      throw new Error('Network error while updating project');
     }
-    throw error;
   }
 };
 
-export const deleteProject = async (projectId) => {
+export const deleteProject = async (id) => {
   try {
-    const response = await api.delete(`/api/projects/${projectId}`);
+    const response = await api.delete(`/api/projects/${id}`);
     return response.data;
   } catch (error) {
-    throw error;
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Failed to delete project');
+    } else {
+      throw new Error('Network error while deleting project');
+    }
   }
 };
 
@@ -477,6 +363,19 @@ export const getPublicProject = async (id) => {
   } catch (error) {
     console.error('Get public project error:', error.response?.data || error.message);
     throw error;
+  }
+};
+
+export const toggleProjectVisibility = async (id) => {
+  try {
+    const response = await api.patch(`/api/projects/${id}/toggle-visibility`);
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Failed to toggle project visibility');
+    } else {
+      throw new Error('Network error while toggling project visibility');
+    }
   }
 };
 
