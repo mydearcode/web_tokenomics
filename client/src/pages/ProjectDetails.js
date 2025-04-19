@@ -42,7 +42,18 @@ const ProjectDetails = () => {
         navigate('/login', { state: { from: `/projects/${id}` } });
         return;
       }
-      setError(err.message);
+      
+      // Daha açıklayıcı hata mesajları
+      let errorMessage = 'An error occurred while loading the project.';
+      if (err.message.includes('No response from server')) {
+        errorMessage = 'The server is not responding. Please try again later.';
+      } else if (err.message.includes('CORS')) {
+        errorMessage = 'Unable to connect to the server. Please try again later.';
+      } else if (err.message.includes('502')) {
+        errorMessage = 'The server is temporarily unavailable. Please try again later.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
