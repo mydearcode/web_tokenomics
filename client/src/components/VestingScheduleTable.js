@@ -11,6 +11,14 @@ import {
 } from '@mui/material';
 
 const VestingScheduleTable = ({ project }) => {
+  if (!project?.vesting?.categories) {
+    return (
+      <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
+        No vesting schedule data available.
+      </Typography>
+    );
+  }
+
   const { vesting, tokenomics } = project;
   const { cliff, duration, categories } = vesting;
 
