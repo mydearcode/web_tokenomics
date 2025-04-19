@@ -26,44 +26,60 @@ const ProjectDetails = () => {
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
+  console.log('ProjectDetails mounted with:', {
+    id,
+    isAuthenticated,
+    user,
+    currentPath: window.location.pathname
+  });
+
   useEffect(() => {
     const fetchProject = async () => {
       try {
         setLoading(true);
-        console.log('Fetching project with ID:', id);
-        console.log('User authentication status:', isAuthenticated);
-        console.log('Current user:', user);
+        console.log('ProjectDetails: Starting to fetch project', {
+          id,
+          isAuthenticated,
+          user,
+          currentPath: window.location.pathname
+        });
         
         let data;
         if (isAuthenticated) {
-          console.log('Attempting to fetch as authenticated user...');
+          console.log('ProjectDetails: Attempting to fetch as authenticated user...');
           try {
             data = await getProject(id);
-            console.log('Successfully fetched project as authenticated user:', data);
+            console.log('ProjectDetails: Successfully fetched project as authenticated user:', data);
           } catch (err) {
-            console.error('Error fetching as authenticated user:', err);
+            console.error('ProjectDetails: Error fetching as authenticated user:', {
+              error: err,
+              message: err.message,
+              response: err.response,
+              status: err.response?.status
+            });
             if (err.message === 'Authentication required' || err.message === 'You do not have permission to view this project') {
-              console.log('Attempting to fetch as public project...');
+              console.log('ProjectDetails: Attempting to fetch as public project...');
               data = await getPublicProject(id);
-              console.log('Successfully fetched project as public:', data);
+              console.log('ProjectDetails: Successfully fetched project as public:', data);
             } else {
               throw err;
             }
           }
         } else {
-          console.log('Attempting to fetch as public project...');
+          console.log('ProjectDetails: Attempting to fetch as public project...');
           data = await getPublicProject(id);
-          console.log('Successfully fetched project as public:', data);
+          console.log('ProjectDetails: Successfully fetched project as public:', data);
         }
         
         setProject(data);
         setError(null);
       } catch (err) {
-        console.error('Error in fetchProject:', {
+        console.error('ProjectDetails: Error in fetchProject:', {
           message: err.message,
           status: err.response?.status,
           data: err.response?.data,
-          stack: err.stack
+          stack: err.stack,
+          fullError: err
         });
         setError(err.message);
       } finally {
@@ -71,7 +87,14 @@ const ProjectDetails = () => {
       }
     };
 
-    fetchProject();
+    if (id) {
+      console.log('ProjectDetails: Initiating fetchProject with id:', id);
+      fetchProject();
+    } else {
+      console.error('ProjectDetails: No project ID provided');
+      setError('No project ID provided');
+      setLoading(false);
+    }
   }, [id, isAuthenticated, user]);
 
   const handleEdit = () => {

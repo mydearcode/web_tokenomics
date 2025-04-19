@@ -117,7 +117,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           
           {/* Public project route */}
-          <Route path="/project/:id" element={<ProjectDetails />} />
+          <Route path="/projects/:id" element={<ProjectDetails />} />
           
           {/* Protected routes */}
           <Route path="/dashboard" element={
@@ -130,12 +130,12 @@ function App() {
               <Profile />
             </ProtectedRoute>
           } />
-          <Route path="/project/create" element={
+          <Route path="/projects/create" element={
             <ProtectedRoute>
               <ProjectCreate />
             </ProtectedRoute>
           } />
-          <Route path="/project/:id/edit" element={
+          <Route path="/projects/:id/edit" element={
             <EditorRoute>
               <ProjectEdit />
             </EditorRoute>
