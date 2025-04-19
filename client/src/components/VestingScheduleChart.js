@@ -141,94 +141,44 @@ const VestingScheduleChart = ({ project }) => {
 
   return (
     <Paper sx={{ p: 3, mt: 3 }}>
-      <Typography variant="h6" gutterBottom>Vesting Schedule</Typography>
-      
-      <Tabs
-        value={activeTab}
-        onChange={handleTabChange}
-        indicatorColor="primary"
-        textColor="primary"
-        variant="fullWidth"
-        sx={{ mb: 2 }}
-      >
-        <Tab label="Chart" />
-        <Tab label="Table" />
-      </Tabs>
-      
-      {activeTab === 0 && (
-        <Box sx={{ height: 400 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-              <XAxis 
-                dataKey="month" 
-                label={{ value: 'Months', position: 'bottom' }}
-                tick={{ fill: '#666' }}
+      <Typography variant="h6" gutterBottom>
+        Vesting Schedule
+      </Typography>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs value={activeTab} onChange={handleTabChange}>
+          <Tab label="Amount" />
+          <Tab label="Percentage" />
+        </Tabs>
+      </Box>
+      <Box sx={{ height: 400 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="month"
+              label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+            />
+            <YAxis
+              label={{
+                value: activeTab === 0 ? 'Tokens' : 'Percentage',
+                angle: -90,
+                position: 'insideLeft'
+              }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+            {categories.map((category, index) => (
+              <Line
+                key={category}
+                type="monotone"
+                dataKey={category}
+                stroke={colors[index % colors.length]}
+                dot={false}
               />
-              <YAxis 
-                label={{ value: 'Tokens', angle: -90, position: 'insideLeft' }}
-                tick={{ fill: '#666' }}
-                tickFormatter={(value) => value.toLocaleString()}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend 
-                verticalAlign="top" 
-                height={36}
-                wrapperStyle={{ paddingBottom: '20px' }}
-              />
-              {categories.map((category, index) => (
-                <Line
-                  key={category}
-                  type="monotone"
-                  dataKey={category}
-                  stroke={colors[index % colors.length]}
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 8 }}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </Box>
-      )}
-      
-      {activeTab === 1 && (
-        <Box sx={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={{ padding: '12px', borderBottom: '2px solid #ddd', textAlign: 'left' }}>Month</th>
-                {categories.map(category => (
-                  <th key={category} style={{ padding: '12px', borderBottom: '2px solid #ddd', textAlign: 'right' }}>
-                    {category}
-                  </th>
-                ))}
-                <th style={{ padding: '12px', borderBottom: '2px solid #ddd', textAlign: 'right' }}>
-                  Total Vested %
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {chartData.map((row, index) => (
-                <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white' }}>
-                  <td style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>{row.month}</td>
-                  {categories.map(category => (
-                    <td key={category} style={{ padding: '12px', borderBottom: '1px solid #ddd', textAlign: 'right' }}>
-                      {row[category]?.toLocaleString() || 0}
-                    </td>
-                  ))}
-                  <td style={{ padding: '12px', borderBottom: '1px solid #ddd', textAlign: 'right' }}>
-                    {row.totalVestedPercentage}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Box>
-      )}
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </Box>
     </Paper>
   );
 };
