@@ -19,6 +19,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import ProjectEditDialog from '../components/ProjectEditDialog';
 import TokenAllocationChart from '../components/charts/TokenAllocationChart';
 import VestingScheduleChart from '../components/VestingScheduleChart';
+import VestingScheduleTable from '../components/VestingScheduleTable';
 
 const ProjectDetails = () => {
   const { id } = useParams();
@@ -27,6 +28,7 @@ const ProjectDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editedProject, setEditedProject] = useState(null);
   const navigate = useNavigate();
 
   const fetchProject = async () => {
@@ -35,6 +37,7 @@ const ProjectDetails = () => {
       const data = await getProject(id);
       console.log('Received project data:', data);
       setProject(data);
+      setEditedProject(data);
       setError(null);
     } catch (err) {
       console.error('Error fetching project:', err);
@@ -67,16 +70,14 @@ const ProjectDetails = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleSave = async (updatedData) => {
+  const handleSave = async () => {
     try {
-      setLoading(true);
-      await updateProject(id, updatedData);
-      await fetchProject();
+      const updatedProject = await updateProject(id, editedProject);
+      setProject(updatedProject);
       setIsEditDialogOpen(false);
+      setError(null);
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -224,6 +225,13 @@ const ProjectDetails = () => {
               Vesting Schedule
             </Typography>
             <VestingScheduleChart project={project} />
+
+            <Box mt={4}>
+              <Typography variant="h5" gutterBottom>
+                Vesting Schedule Details
+              </Typography>
+              <VestingScheduleTable project={project} />
+            </Box>
           </>
         )}
       </Paper>
