@@ -22,7 +22,7 @@ const COLORS = [
 ];
 
 const VestingScheduleTable = ({ project }) => {
-  if (!project?.vesting?.categories) {
+  if (!project?.vesting) {
     return (
       <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
         No vesting schedule data available.
@@ -30,21 +30,39 @@ const VestingScheduleTable = ({ project }) => {
     );
   }
 
-  const { vesting, tokenomics } = project;
-  const { categories } = vesting;
-
-  const calculateVestedAmount = (category, month) => {
-    const { percentage, amount, startMonth, vestingPeriod } = category;
-    const totalAmount = amount || (tokenomics.totalSupply * percentage) / 100;
-
-    if (month < startMonth) return 0;
-    if (month >= startMonth + vestingPeriod) return totalAmount;
-
-    const vestedMonths = month - startMonth;
-    return (totalAmount * vestedMonths) / vestingPeriod;
-  };
+  const categories = Object.entries(project.tokenomics.allocation).map(([category, data]) => ({
+    name: category,
+    percentage: data.percentage,
+    amount: data.amount,
+    color: data.color || COLORS[Object.keys(project.tokenomics.allocation).indexOf(category) % COLORS.length],
+  }));
 
   const months = Array.from({ length: 60 }, (_, i) => i + 1);
+
+  const calculateVestedAmount = (category, month) => {
+    const vesting = project.vesting[category.name];
+    if (!vesting) return 0;
+
+    const { tgePercentage, cliffMonths, vestingMonths } = vesting;
+    const totalAmount = category.amount;
+
+    if (month === 0) {
+      return (totalAmount * tgePercentage) / 100;
+    }
+
+    if (month <= cliffMonths) {
+      return (totalAmount * tgePercentage) / 100;
+    }
+
+    const monthsAfterCliff = month - cliffMonths;
+    if (monthsAfterCliff >= vestingMonths) {
+      return totalAmount;
+    }
+
+    const linearVesting = (totalAmount * (100 - tgePercentage)) / 100;
+    const vestedAfterCliff = (linearVesting * monthsAfterCliff) / vestingMonths;
+    return (totalAmount * tgePercentage) / 100 + vestedAfterCliff;
+  };
 
   return (
     <TableContainer component={Paper} sx={{ mt: 2 }}>
@@ -52,16 +70,16 @@ const VestingScheduleTable = ({ project }) => {
         <TableHead>
           <TableRow>
             <TableCell>Month</TableCell>
-            {Object.entries(categories).map(([category, details], index) => (
+            {categories.map((category) => (
               <TableCell 
-                key={category} 
+                key={category.name} 
                 align="right"
                 sx={{ 
-                  color: COLORS[index % COLORS.length],
+                  color: category.color,
                   fontWeight: 'bold'
                 }}
               >
-                {category} ({details.percentage}%)
+                {category.name} ({category.percentage}%)
               </TableCell>
             ))}
             <TableCell align="right" sx={{ fontWeight: 'bold' }}>Total Vested</TableCell>
@@ -73,13 +91,13 @@ const VestingScheduleTable = ({ project }) => {
               <TableCell component="th" scope="row">
                 {month}
               </TableCell>
-              {Object.entries(categories).map(([category, details], index) => {
-                const vestedAmount = calculateVestedAmount(details, month);
+              {categories.map((category) => {
+                const vestedAmount = calculateVestedAmount(category, month);
                 return (
                   <TableCell 
-                    key={category} 
+                    key={`${category.name}-${month}`} 
                     align="right"
-                    sx={{ color: COLORS[index % COLORS.length] }}
+                    sx={{ color: category.color }}
                   >
                     {vestedAmount.toLocaleString(undefined, {
                       maximumFractionDigits: 2,
@@ -88,8 +106,8 @@ const VestingScheduleTable = ({ project }) => {
                 );
               })}
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                {Object.entries(categories)
-                  .reduce((total, [_, details]) => total + calculateVestedAmount(details, month), 0)
+                {categories
+                  .reduce((total, category) => total + calculateVestedAmount(category, month), 0)
                   .toLocaleString(undefined, {
                     maximumFractionDigits: 2,
                   })}
