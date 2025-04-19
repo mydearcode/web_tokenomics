@@ -21,50 +21,43 @@ ChartJS.register(
   Legend
 );
 
+const COLORS = [
+  '#FF6384', // Red
+  '#36A2EB', // Blue
+  '#FFCE56', // Yellow
+  '#4BC0C0', // Teal
+  '#9966FF', // Purple
+  '#FF9F40', // Orange
+  '#C9CBCF', // Gray
+  '#00A86B', // Green
+];
+
 const VestingScheduleChart = ({ project }) => {
-  if (!project?.vesting) return null;
+  if (!project?.vesting?.categories) return null;
 
-  const categories = Object.entries(project.tokenomics.allocation).map(([category, data]) => ({
-    name: category,
-    percentage: data.percentage,
-    amount: data.amount,
-    color: data.color || '#000000', // Default color if not specified
-  }));
+  const { vesting, tokenomics } = project;
+  const { categories } = vesting;
 
-  const months = Array.from({ length: 60 }, (_, i) => i + 1); // 5 years = 60 months
+  const months = Array.from({ length: 60 }, (_, i) => i + 1);
 
   const calculateVestedAmount = (category, month) => {
-    const vesting = project.vesting[category];
-    if (!vesting) return 0;
+    const { percentage, amount, startMonth, vestingPeriod } = category;
+    const totalAmount = amount || (tokenomics.totalSupply * percentage) / 100;
 
-    const { tgePercentage, cliffMonths, vestingMonths } = vesting;
-    const totalAmount = project.tokenomics.allocation[category].amount;
+    if (month < startMonth) return 0;
+    if (month >= startMonth + vestingPeriod) return totalAmount;
 
-    if (month === 0) {
-      return (totalAmount * tgePercentage) / 100;
-    }
-
-    if (month <= cliffMonths) {
-      return (totalAmount * tgePercentage) / 100;
-    }
-
-    const monthsAfterCliff = month - cliffMonths;
-    if (monthsAfterCliff >= vestingMonths) {
-      return totalAmount;
-    }
-
-    const linearVesting = (totalAmount * (100 - tgePercentage)) / 100;
-    const vestedAfterCliff = (linearVesting * monthsAfterCliff) / vestingMonths;
-    return (totalAmount * tgePercentage) / 100 + vestedAfterCliff;
+    const vestedMonths = month - startMonth;
+    return (totalAmount * vestedMonths) / vestingPeriod;
   };
 
   const data = {
     labels: months,
-    datasets: categories.map(category => ({
-      label: `${category.name} (${category.percentage}%)`,
-      data: months.map(month => calculateVestedAmount(category.name, month)),
-      borderColor: category.color,
-      backgroundColor: category.color,
+    datasets: Object.entries(categories).map(([category, details], index) => ({
+      label: `${category} (${details.percentage}%)`,
+      data: months.map(month => calculateVestedAmount(details, month)),
+      borderColor: COLORS[index % COLORS.length],
+      backgroundColor: COLORS[index % COLORS.length],
       tension: 0.1,
     })),
   };
@@ -74,10 +67,21 @@ const VestingScheduleChart = ({ project }) => {
     plugins: {
       legend: {
         position: 'top',
+        labels: {
+          color: '#333',
+          font: {
+            size: 12,
+          },
+        },
       },
       title: {
         display: true,
         text: 'Vesting Schedule',
+        color: '#333',
+        font: {
+          size: 16,
+          weight: 'bold',
+        },
       },
       tooltip: {
         callbacks: {
@@ -94,14 +98,28 @@ const VestingScheduleChart = ({ project }) => {
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Tokens'
-        }
+          text: 'Tokens',
+          color: '#333',
+        },
+        ticks: {
+          color: '#333',
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.1)',
+        },
       },
       x: {
         title: {
           display: true,
-          text: 'Months'
-        }
+          text: 'Months',
+          color: '#333',
+        },
+        ticks: {
+          color: '#333',
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.1)',
+        },
       }
     }
   };

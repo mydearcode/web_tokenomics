@@ -10,6 +10,17 @@ import {
   Typography,
 } from '@mui/material';
 
+const COLORS = [
+  '#FF6384', // Red
+  '#36A2EB', // Blue
+  '#FFCE56', // Yellow
+  '#4BC0C0', // Teal
+  '#9966FF', // Purple
+  '#FF9F40', // Orange
+  '#C9CBCF', // Gray
+  '#00A86B', // Green
+];
+
 const VestingScheduleTable = ({ project }) => {
   if (!project?.vesting?.categories) {
     return (
@@ -20,7 +31,7 @@ const VestingScheduleTable = ({ project }) => {
   }
 
   const { vesting, tokenomics } = project;
-  const { cliff, duration, categories } = vesting;
+  const { categories } = vesting;
 
   const calculateVestedAmount = (category, month) => {
     const { percentage, amount, startMonth, vestingPeriod } = category;
@@ -36,17 +47,24 @@ const VestingScheduleTable = ({ project }) => {
   const months = Array.from({ length: 60 }, (_, i) => i + 1);
 
   return (
-    <TableContainer component={Paper}>
+    <TableContainer component={Paper} sx={{ mt: 2 }}>
       <Table>
         <TableHead>
           <TableRow>
             <TableCell>Month</TableCell>
-            {Object.entries(categories).map(([category, details]) => (
-              <TableCell key={category} align="right">
-                {category}
+            {Object.entries(categories).map(([category, details], index) => (
+              <TableCell 
+                key={category} 
+                align="right"
+                sx={{ 
+                  color: COLORS[index % COLORS.length],
+                  fontWeight: 'bold'
+                }}
+              >
+                {category} ({details.percentage}%)
               </TableCell>
             ))}
-            <TableCell align="right">Total Vested</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 'bold' }}>Total Vested</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -55,17 +73,21 @@ const VestingScheduleTable = ({ project }) => {
               <TableCell component="th" scope="row">
                 {month}
               </TableCell>
-              {Object.entries(categories).map(([category, details]) => {
+              {Object.entries(categories).map(([category, details], index) => {
                 const vestedAmount = calculateVestedAmount(details, month);
                 return (
-                  <TableCell key={category} align="right">
+                  <TableCell 
+                    key={category} 
+                    align="right"
+                    sx={{ color: COLORS[index % COLORS.length] }}
+                  >
                     {vestedAmount.toLocaleString(undefined, {
                       maximumFractionDigits: 2,
                     })}
                   </TableCell>
                 );
               })}
-              <TableCell align="right">
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                 {Object.entries(categories)
                   .reduce((total, [_, details]) => total + calculateVestedAmount(details, month), 0)
                   .toLocaleString(undefined, {
