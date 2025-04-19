@@ -31,30 +31,40 @@ const ProjectDetails = () => {
       try {
         setLoading(true);
         console.log('Fetching project with ID:', id);
+        console.log('User authentication status:', isAuthenticated);
+        console.log('Current user:', user);
         
         let data;
         if (isAuthenticated) {
-          // Try to fetch as authenticated user first
+          console.log('Attempting to fetch as authenticated user...');
           try {
             data = await getProject(id);
+            console.log('Successfully fetched project as authenticated user:', data);
           } catch (err) {
+            console.error('Error fetching as authenticated user:', err);
             if (err.message === 'Authentication required' || err.message === 'You do not have permission to view this project') {
-              // If auth fails, try public endpoint
+              console.log('Attempting to fetch as public project...');
               data = await getPublicProject(id);
+              console.log('Successfully fetched project as public:', data);
             } else {
               throw err;
             }
           }
         } else {
-          // Try to fetch as public project
+          console.log('Attempting to fetch as public project...');
           data = await getPublicProject(id);
+          console.log('Successfully fetched project as public:', data);
         }
         
-        console.log('Project data received:', data);
         setProject(data);
         setError(null);
       } catch (err) {
-        console.error('Error fetching project:', err);
+        console.error('Error in fetchProject:', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+          stack: err.stack
+        });
         setError(err.message);
       } finally {
         setLoading(false);
@@ -62,7 +72,7 @@ const ProjectDetails = () => {
     };
 
     fetchProject();
-  }, [id, isAuthenticated]);
+  }, [id, isAuthenticated, user]);
 
   const handleEdit = () => {
     if (!isAuthenticated) {

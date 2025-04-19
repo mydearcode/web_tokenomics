@@ -29,10 +29,26 @@ router.get('/', protect, async (req, res) => {
 // Get single project with access control
 router.get('/:id', protect, checkProjectAccess, async (req, res) => {
   try {
+    console.log('Project access details:', {
+      projectId: req.params.id,
+      userId: req.user?._id,
+      accessType: req.projectAccess,
+      isPublic: req.project?.isPublic
+    });
+    
     // Project is already available in req.project from checkProjectAccess middleware
+    if (!req.project) {
+      console.error('Project not found in request object');
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    
     res.json(req.project);
   } catch (error) {
-    console.error('Get project error:', error);
+    console.error('Get project error:', {
+      message: error.message,
+      stack: error.stack,
+      projectId: req.params.id
+    });
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -564,21 +580,30 @@ router.get('/:id/check-access', protect, async (req, res) => {
 // Get public project (no authentication required)
 router.get('/public/:id', async (req, res) => {
   try {
+    console.log('Fetching public project:', req.params.id);
+    
     const project = await Project.findById(req.params.id)
       .populate('owner', 'name email')
       .populate('collaborators.user', 'name email');
     
     if (!project) {
+      console.log('Public project not found:', req.params.id);
       return res.status(404).json({ message: 'Project not found' });
     }
-
+    
     if (!project.isPublic) {
-      return res.status(403).json({ message: 'This project is not public' });
+      console.log('Project is private:', req.params.id);
+      return res.status(403).json({ message: 'This project is private' });
     }
     
+    console.log('Public project found:', project._id);
     res.json(project);
   } catch (error) {
-    console.error('Get public project error:', error);
+    console.error('Get public project error:', {
+      message: error.message,
+      stack: error.stack,
+      projectId: req.params.id
+    });
     res.status(500).json({ message: 'Server error' });
   }
 });
