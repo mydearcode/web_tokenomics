@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getProject, updateProject } from '../services/api';
+import { getProject, getPublicProject, updateProject } from '../services/api';
 import {
   Box,
   Container,
@@ -31,15 +31,31 @@ const ProjectDetails = () => {
       try {
         setLoading(true);
         console.log('Fetching project with ID:', id);
-        const data = await getProject(id);
+        
+        // Try to fetch project based on authentication status
+        let data;
+        if (isAuthenticated) {
+          data = await getProject(id);
+        } else {
+          data = await getPublicProject(id);
+        }
+        
         console.log('Project data received:', data);
         setProject(data);
         setError(null);
       } catch (err) {
         console.error('Error fetching project:', err);
-        setError(err.message);
-        if (err.message.includes('Authentication required')) {
-          setError(null);
+        if (err.message === 'Authentication required') {
+          // Try to fetch as public project
+          try {
+            const publicData = await getPublicProject(id);
+            setProject(publicData);
+            setError(null);
+          } catch (publicErr) {
+            setError('This project is private. Please log in to view it.');
+          }
+        } else {
+          setError(err.message);
         }
       } finally {
         setLoading(false);
@@ -47,7 +63,7 @@ const ProjectDetails = () => {
     };
 
     fetchProject();
-  }, [id]);
+  }, [id, isAuthenticated]);
 
   const handleEdit = () => {
     if (!isAuthenticated) {

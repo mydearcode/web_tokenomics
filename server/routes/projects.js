@@ -27,40 +27,10 @@ router.get('/', protect, async (req, res) => {
 });
 
 // Get single project with access control
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', protect, checkProjectAccess, async (req, res) => {
   try {
-    // Validate project ID
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ 
-        message: 'Invalid project ID',
-        details: 'The provided project ID is not valid'
-      });
-    }
-
-    const project = await Project.findById(req.params.id)
-      .populate('owner', 'name email')
-      .populate('collaborators.user', 'name email');
-    
-    if (!project) {
-      return res.status(404).json({ 
-        message: 'Project not found',
-        details: 'The requested project does not exist'
-      });
-    }
-
-    // Check if user has access to the project
-    const hasAccess = project.isPublic || 
-                     project.owner._id.equals(req.user._id) || 
-                     project.collaborators.some(c => c.user._id.equals(req.user._id));
-
-    if (!hasAccess) {
-      return res.status(403).json({ 
-        message: 'Access denied',
-        details: 'You do not have permission to view this project'
-      });
-    }
-
-    res.json(project);
+    // Project is already available in req.project from checkProjectAccess middleware
+    res.json(req.project);
   } catch (error) {
     console.error('Get project error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -591,7 +561,7 @@ router.get('/:id/check-access', protect, async (req, res) => {
   }
 });
 
-// Get public project
+// Get public project (no authentication required)
 router.get('/public/:id', async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)

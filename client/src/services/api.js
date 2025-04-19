@@ -388,13 +388,30 @@ export const checkProjectAccess = async (projectId) => {
 export const getPublicProject = async (id) => {
   try {
     console.log('Fetching public project:', id);
-    // Make unauthenticated request for public projects
-    const response = await axios.get(`${API_URL}/api/projects/public/${id}`);
-    console.log('Public project response:', response.data);
+    const response = await api.get(`/api/projects/public/${id}`);
+    console.log('Public project response:', response);
     return response.data;
   } catch (error) {
-    console.error('Get public project error:', error.response?.data || error.message);
-    throw error;
+    console.error('API error details:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    
+    if (error.response) {
+      switch (error.response.status) {
+        case 403:
+          throw new Error('This project is private');
+        case 404:
+          throw new Error('Project not found');
+        default:
+          throw new Error(error.response.data?.message || 'Failed to fetch project');
+      }
+    } else if (error.request) {
+      throw new Error('Server is not responding. Please check your internet connection');
+    } else {
+      throw new Error('An error occurred while fetching the project');
+    }
   }
 };
 
