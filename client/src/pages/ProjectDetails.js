@@ -17,20 +17,18 @@ import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import ProjectEditDialog from '../components/ProjectEditDialog';
+import TokenAllocationChart from '../components/charts/TokenAllocationChart';
+import VestingScheduleChart from '../components/VestingScheduleChart';
 
 const ProjectDetails = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
-  const canEditProject = (project) => {
-    if (!user || !project) return false;
-    return user._id === project.owner._id;
-  };
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProject, setEditedProject] = useState(null);
+  const navigate = useNavigate();
 
   const fetchProject = async () => {
     try {
@@ -38,14 +36,15 @@ const ProjectDetails = () => {
       const data = await getProject(id);
       console.log('Received project data:', data);
       setProject(data);
+      setEditedProject(data);
       setError(null);
     } catch (err) {
       console.error('Error fetching project:', err);
       if (err.message === 'Authentication required') {
-        setError('Please log in to view this project');
-      } else {
-        setError(err.message || 'Failed to load project');
+        navigate('/login', { state: { from: `/projects/${id}` } });
+        return;
       }
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -56,172 +55,105 @@ const ProjectDetails = () => {
   }, [id]);
 
   const handleEdit = () => {
-    setIsEditDialogOpen(true);
+    setIsEditing(true);
   };
 
-  const handleSave = async (updatedData) => {
+  const handleSave = async () => {
     try {
-      setLoading(true);
-      await updateProject(id, updatedData);
-      await fetchProject();
-      setIsEditDialogOpen(false);
+      await updateProject(id, editedProject);
+      setProject(editedProject);
+      setIsEditing(false);
+      setError(null);
     } catch (err) {
-      setError(err.message || 'Failed to update project');
-    } finally {
-      setLoading(false);
+      setError(err.message);
     }
+  };
+
+  const handleCancel = () => {
+    setEditedProject(project);
+    setIsEditing(false);
   };
 
   const handleToggleVisibility = async () => {
     try {
-      setLoading(true);
-      await toggleProjectVisibility(id);
-      await fetchProject();
+      const updatedProject = await toggleProjectVisibility(id);
+      setProject(updatedProject);
+      setEditedProject(updatedProject);
+      setError(null);
     } catch (err) {
-      setError(err.message || 'Failed to toggle project visibility');
-    } finally {
-      setLoading(false);
+      setError(err.message);
     }
   };
 
-  if (loading) {
-    return (
-      <Container sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Alert severity="error">{error}</Alert>
-      </Container>
-    );
-  }
-
-  if (!project) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Alert severity="info">Project not found</Alert>
-      </Container>
-    );
-  }
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div className="error">{error}</div>;
+  if (!project) return <div>Project not found</div>;
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ p: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1">
-            {project.name}
-          </Typography>
-          {canEditProject(project) && (
-            <Box>
-              <Button
-                startIcon={<EditIcon />}
-                variant="outlined"
-                onClick={handleEdit}
-                sx={{ mr: 1 }}
-              >
-                Edit
-              </Button>
-              <Button
-                startIcon={project.isPublic ? <VisibilityIcon /> : <VisibilityOffIcon />}
-                variant="outlined"
-                onClick={handleToggleVisibility}
-              >
-                {project.isPublic ? 'Make Private' : 'Make Public'}
-              </Button>
-            </Box>
+    <div className="project-details">
+      <h1>{isEditing ? 'Edit Project' : project.name}</h1>
+      
+      {isEditing ? (
+        <div className="edit-form">
+          <input
+            type="text"
+            value={editedProject.name}
+            onChange={(e) => setEditedProject({ ...editedProject, name: e.target.value })}
+          />
+          <textarea
+            value={editedProject.description}
+            onChange={(e) => setEditedProject({ ...editedProject, description: e.target.value })}
+          />
+          <div className="button-group">
+            <button onClick={handleSave}>Save</button>
+            <button onClick={handleCancel}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div className="project-content">
+          <p className="description">{project.description}</p>
+          
+          <div className="token-info">
+            <h2>Token Information</h2>
+            <p><strong>Token Name:</strong> {project.tokenName}</p>
+            <p><strong>Token Symbol:</strong> {project.tokenSymbol}</p>
+            <p><strong>Total Supply:</strong> {project.tokenomics.totalSupply.toLocaleString()}</p>
+            <p><strong>Initial Price:</strong> ${project.tokenomics.initialPrice}</p>
+            <p><strong>Max Supply:</strong> {project.tokenomics.maxSupply.toLocaleString()}</p>
+            <p><strong>Decimals:</strong> {project.tokenomics.decimals}</p>
+          </div>
+
+          <div className="allocation-info">
+            <h2>Token Allocation</h2>
+            <TokenAllocationChart allocation={project.tokenomics.allocation} />
+            <div className="allocation-details">
+              {Object.entries(project.tokenomics.allocation).map(([category, data]) => (
+                <div key={category} className="allocation-item">
+                  <span className="category">{category}</span>
+                  <span className="percentage">{data.percentage}%</span>
+                  <span className="amount">{data.amount.toLocaleString()} tokens</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="project-meta">
+            <p><strong>Created by:</strong> {project.owner.name}</p>
+            <p><strong>Visibility:</strong> {project.isPublic ? 'Public' : 'Private'}</p>
+            <p><strong>Created:</strong> {new Date(project.createdAt).toLocaleDateString()}</p>
+          </div>
+
+          {user && (user._id === project.owner._id) && (
+            <div className="admin-controls">
+              <button onClick={handleEdit}>Edit Project</button>
+              <button onClick={handleToggleVisibility}>
+                Make {project.isPublic ? 'Private' : 'Public'}
+              </button>
+            </div>
           )}
-        </Box>
-
-        <Typography variant="subtitle1" color="text.secondary" paragraph>
-          {project.description}
-        </Typography>
-
-        <Divider sx={{ my: 3 }} />
-
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="h6" gutterBottom>
-              Token Information
-            </Typography>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body1">
-                <strong>Token Name:</strong> {project.tokenName}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Token Symbol:</strong> {project.tokenSymbol}
-              </Typography>
-            </Box>
-
-            <Typography variant="h6" gutterBottom>
-              Tokenomics
-            </Typography>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body1">
-                <strong>Total Supply:</strong> {project.tokenomics.totalSupply.toLocaleString()}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Initial Price:</strong> ${project.tokenomics.initialPrice}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Max Supply:</strong> {project.tokenomics.maxSupply.toLocaleString()}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Decimals:</strong> {project.tokenomics.decimals}
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Typography variant="h6" gutterBottom>
-              Allocation
-            </Typography>
-            {Object.entries(project.tokenomics.allocation).map(([category, data]) => (
-              <Box key={category} sx={{ mb: 2 }}>
-                <Typography variant="subtitle1">
-                  {category}
-                </Typography>
-                <Typography variant="body1">
-                  <strong>Percentage:</strong> {data.percentage}%
-                </Typography>
-                <Typography variant="body1">
-                  <strong>Amount:</strong> {data.amount.toLocaleString()}
-                </Typography>
-              </Box>
-            ))}
-          </Grid>
-        </Grid>
-
-        <Divider sx={{ my: 3 }} />
-
-        <Box>
-          <Typography variant="h6" gutterBottom>
-            Project Details
-          </Typography>
-          <Typography variant="body1">
-            <strong>Created by:</strong> {project.owner.name}
-          </Typography>
-          <Typography variant="body1">
-            <strong>Visibility:</strong> {project.isPublic ? 'Public' : 'Private'}
-          </Typography>
-          <Typography variant="body1">
-            <strong>Created at:</strong> {new Date(project.createdAt).toLocaleDateString()}
-          </Typography>
-        </Box>
-      </Paper>
-
-      {project && (
-        <ProjectEditDialog
-          open={isEditDialogOpen}
-          onClose={() => setIsEditDialogOpen(false)}
-          onSave={handleSave}
-          project={project}
-        />
+        </div>
       )}
-    </Container>
+    </div>
   );
 };
 
