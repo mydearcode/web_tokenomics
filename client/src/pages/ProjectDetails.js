@@ -33,6 +33,32 @@ const ProjectDetails = () => {
     currentPath: window.location.pathname
   });
 
+  // Helper function to check if user can edit the project
+  const canEditProject = (project) => {
+    if (!isAuthenticated || !user || !project) return false;
+
+    // Check if user is owner
+    const isOwner = project.owner && (
+      (typeof project.owner === 'string' && project.owner === user.id) ||
+      (project.owner._id && project.owner._id === user.id)
+    );
+
+    if (isOwner) return true;
+
+    // Check if user is editor
+    const isEditor = project.collaborators && project.collaborators.some(c => {
+      if (!c || !c.user) return false;
+      
+      const collabUserId = typeof c.user === 'object' && c.user._id 
+        ? c.user._id 
+        : c.user;
+        
+      return collabUserId === user.id && c.role === 'editor';
+    });
+
+    return isEditor;
+  };
+
   useEffect(() => {
     const fetchProject = async () => {
       try {
@@ -103,7 +129,7 @@ const ProjectDetails = () => {
       return;
     }
 
-    if (!project.canEdit()) {
+    if (!canEditProject(project)) {
       setError('You do not have permission to edit this project');
       return;
     }
@@ -207,7 +233,7 @@ const ProjectDetails = () => {
             </Box>
           )}
           <Box>
-            {isAuthenticated && project.canEdit() && (
+            {isAuthenticated && canEditProject(project) && (
               <>
                 <Tooltip title={project.isPublic ? "Make Private" : "Make Public"}>
                   <IconButton onClick={handleToggleVisibility} color="primary">
