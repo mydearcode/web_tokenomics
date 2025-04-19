@@ -1,253 +1,139 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getProject, getPublicProject, updateProject } from '../services/api';
+import { getProject, updateProject, toggleProjectVisibility } from '../services/api';
 import {
-  Box,
   Container,
-  Typography,
-  Button,
-  CircularProgress,
-  Alert,
   Paper,
+  Typography,
+  Box,
+  Button,
   Grid,
   Divider,
-  IconButton,
-  Tooltip
+  CircularProgress,
+  Alert,
 } from '@mui/material';
-import { Edit as EditIcon, Lock as LockIcon, Public as PublicIcon } from '@mui/icons-material';
+import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import ProjectEditDialog from '../components/ProjectEditDialog';
 
 const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  console.log('ProjectDetails mounted with:', {
-    id,
-    isAuthenticated,
-    user,
-    currentPath: window.location.pathname
-  });
-
-  // Helper function to check if user can edit the project
   const canEditProject = (project) => {
-    if (!isAuthenticated || !user || !project) return false;
+    if (!user || !project) return false;
+    return user._id === project.owner._id;
+  };
 
-    // Check if user is owner
-    const isOwner = project.owner && (
-      (typeof project.owner === 'string' && project.owner === user.id) ||
-      (project.owner._id && project.owner._id === user.id)
-    );
-
-    if (isOwner) return true;
-
-    // Check if user is editor
-    const isEditor = project.collaborators && project.collaborators.some(c => {
-      if (!c || !c.user) return false;
-      
-      const collabUserId = typeof c.user === 'object' && c.user._id 
-        ? c.user._id 
-        : c.user;
-        
-      return collabUserId === user.id && c.role === 'editor';
-    });
-
-    return isEditor;
+  const fetchProject = async () => {
+    try {
+      console.log('Fetching project with ID:', id);
+      const data = await getProject(id);
+      console.log('Received project data:', data);
+      setProject(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching project:', err);
+      if (err.message === 'Authentication required') {
+        setError('Please log in to view this project');
+      } else {
+        setError(err.message || 'Failed to load project');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        setLoading(true);
-        console.log('ProjectDetails: Starting to fetch project', {
-          id,
-          isAuthenticated,
-          user,
-          currentPath: window.location.pathname
-        });
-        
-        let data;
-        if (isAuthenticated) {
-          console.log('ProjectDetails: Attempting to fetch as authenticated user...');
-          try {
-            data = await getProject(id);
-            console.log('ProjectDetails: Successfully fetched project as authenticated user:', data);
-          } catch (err) {
-            console.error('ProjectDetails: Error fetching as authenticated user:', {
-              error: err,
-              message: err.message,
-              response: err.response,
-              status: err.response?.status
-            });
-            if (err.message === 'Authentication required' || err.message === 'You do not have permission to view this project') {
-              console.log('ProjectDetails: Attempting to fetch as public project...');
-              data = await getPublicProject(id);
-              console.log('ProjectDetails: Successfully fetched project as public:', data);
-            } else {
-              throw err;
-            }
-          }
-        } else {
-          console.log('ProjectDetails: Attempting to fetch as public project...');
-          data = await getPublicProject(id);
-          console.log('ProjectDetails: Successfully fetched project as public:', data);
-        }
-        
-        setProject(data);
-        setError(null);
-      } catch (err) {
-        console.error('ProjectDetails: Error in fetchProject:', {
-          message: err.message,
-          status: err.response?.status,
-          data: err.response?.data,
-          stack: err.stack,
-          fullError: err
-        });
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) {
-      console.log('ProjectDetails: Initiating fetchProject with id:', id);
-      fetchProject();
-    } else {
-      console.error('ProjectDetails: No project ID provided');
-      setError('No project ID provided');
-      setLoading(false);
-    }
-  }, [id, isAuthenticated, user]);
+    fetchProject();
+  }, [id]);
 
   const handleEdit = () => {
-    if (!isAuthenticated) {
-      setError('Please log in to edit this project');
-      return;
-    }
-
-    if (!canEditProject(project)) {
-      setError('You do not have permission to edit this project');
-      return;
-    }
-
-    setIsEditing(true);
+    setIsEditDialogOpen(true);
   };
 
   const handleSave = async (updatedData) => {
     try {
-      const updatedProject = await updateProject(id, updatedData);
-      setProject({
-        ...updatedProject,
-        canEdit: () => updatedProject.owner._id === user._id || 
-          updatedProject.collaborators?.some(collab => 
-            collab.user._id === user._id && collab.role === 'editor'
-          )
-      });
-      setIsEditing(false);
-      setError(null);
+      setLoading(true);
+      await updateProject(id, updatedData);
+      await fetchProject();
+      setIsEditDialogOpen(false);
     } catch (err) {
-      setError('Failed to update project');
+      setError(err.message || 'Failed to update project');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleToggleVisibility = async () => {
     try {
-      const updatedProject = await updateProject(id, {
-        ...project,
-        isPublic: !project.isPublic
-      });
-      setProject({
-        ...updatedProject,
-        canEdit: () => updatedProject.owner._id === user._id || 
-          updatedProject.collaborators?.some(collab => 
-            collab.user._id === user._id && collab.role === 'editor'
-          )
-      });
+      setLoading(true);
+      await toggleProjectVisibility(id);
+      await fetchProject();
     } catch (err) {
-      setError('Failed to update project visibility');
+      setError(err.message || 'Failed to toggle project visibility');
+    } finally {
+      setLoading(false);
     }
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+      <Container sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
         <CircularProgress />
-      </Box>
+      </Container>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="md">
-        <Alert severity="error" sx={{ mt: 4 }}>
-          {error}
-          {!isAuthenticated && error.includes('Authentication required') && (
-            <Button
-              color="primary"
-              variant="contained"
-              sx={{ ml: 2 }}
-              onClick={() => navigate('/login')}
-            >
-              Log In
-            </Button>
-          )}
-        </Alert>
+      <Container sx={{ mt: 4 }}>
+        <Alert severity="error">{error}</Alert>
       </Container>
     );
   }
 
   if (!project) {
     return (
-      <Container maxWidth="md">
-        <Alert severity="error" sx={{ mt: 4 }}>
-          Project not found
-        </Alert>
+      <Container sx={{ mt: 4 }}>
+        <Alert severity="info">Project not found</Alert>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Paper sx={{ p: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" component="h1">
             {project.name}
           </Typography>
-          {!isAuthenticated && project.isPrivate && (
+          {canEditProject(project) && (
             <Box>
-              <Alert severity="info">
-                This is a private project. Please log in to view it.
-                <Button
-                  color="primary"
-                  variant="contained"
-                  sx={{ ml: 2 }}
-                  onClick={() => navigate('/login')}
-                >
-                  Log In
-                </Button>
-              </Alert>
+              <Button
+                startIcon={<EditIcon />}
+                variant="outlined"
+                onClick={handleEdit}
+                sx={{ mr: 1 }}
+              >
+                Edit
+              </Button>
+              <Button
+                startIcon={project.isPublic ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                variant="outlined"
+                onClick={handleToggleVisibility}
+              >
+                {project.isPublic ? 'Make Private' : 'Make Public'}
+              </Button>
             </Box>
           )}
-          <Box>
-            {isAuthenticated && canEditProject(project) && (
-              <>
-                <Tooltip title={project.isPublic ? "Make Private" : "Make Public"}>
-                  <IconButton onClick={handleToggleVisibility} color="primary">
-                    {project.isPublic ? <PublicIcon /> : <LockIcon />}
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Edit Project">
-                  <IconButton onClick={handleEdit} color="primary">
-                    <EditIcon />
-                  </IconButton>
-                </Tooltip>
-              </>
-            )}
-          </Box>
         </Box>
 
         <Typography variant="subtitle1" color="text.secondary" paragraph>
@@ -326,6 +212,15 @@ const ProjectDetails = () => {
           </Typography>
         </Box>
       </Paper>
+
+      {project && (
+        <ProjectEditDialog
+          open={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          onSave={handleSave}
+          project={project}
+        />
+      )}
     </Container>
   );
 };
