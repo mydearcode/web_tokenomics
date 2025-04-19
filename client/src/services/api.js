@@ -220,7 +220,7 @@ export const getProjects = async () => {
 export const getProject = async (id) => {
   try {
     console.log('Making API call to get project:', id);
-    const response = await api.get(`/api/projects/${id}`);
+    const response = await api.get(`/projects/${id}`);
     console.log('API response:', response);
     return response.data;
   } catch (error) {
@@ -398,7 +398,7 @@ export const checkProjectAccess = async (projectId) => {
 export const getPublicProject = async (id) => {
   try {
     console.log('Fetching public project:', id);
-    const response = await api.get(`/api/projects/public/${id}`);
+    const response = await api.get(`/projects/public/${id}`);
     console.log('Public project response:', response);
     return response.data;
   } catch (error) {
