@@ -37,8 +37,18 @@ api.interceptors.response.use(
     if (error.response) {
       // Server responded with error
       const { status, data } = error.response;
-      let message = data.message || 'An error occurred';
       
+      // Handle authentication errors
+      if (status === 401) {
+        // Clear token and user data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // Redirect to login page
+        window.location.href = '/login';
+      }
+      
+      // Create error message
+      let message = data.message || 'An error occurred';
       if (data.details) {
         message = `${message}: ${data.details}`;
       }

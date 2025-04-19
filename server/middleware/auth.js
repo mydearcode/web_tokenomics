@@ -13,7 +13,10 @@ exports.protect = async (req, res, next) => {
     
     // Check if token exists
     if (!token) {
-      return res.status(401).json({ message: 'Not authorized' });
+      return res.status(401).json({ 
+        message: 'Authentication required',
+        details: 'No token provided'
+      });
     }
     
     try {
@@ -24,7 +27,10 @@ exports.protect = async (req, res, next) => {
       const user = await User.findById(decoded.id).select('-password');
       
       if (!user) {
-        return res.status(401).json({ message: 'User not found' });
+        return res.status(401).json({ 
+          message: 'Authentication failed',
+          details: 'User not found'
+        });
       }
       
       // Add user to request object
@@ -32,21 +38,52 @@ exports.protect = async (req, res, next) => {
       next();
     } catch (error) {
       console.error('Auth middleware error:', error);
-      res.status(401).json({ message: 'Not authorized' });
+      
+      if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({ 
+          message: 'Authentication failed',
+          details: 'Invalid token'
+        });
+      }
+      
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({ 
+          message: 'Authentication failed',
+          details: 'Token expired'
+        });
+      }
+      
+      res.status(401).json({ 
+        message: 'Authentication failed',
+        details: error.message
+      });
     }
   } catch (error) {
-    next(error);
+    console.error('Auth middleware error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      details: error.message
+    });
   }
 };
 
 // Middleware to restrict access to specific roles
 exports.authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        message: `User role ${req.user.role} is not authorized to access this route` 
+    if (!req.user) {
+      return res.status(401).json({ 
+        message: 'Authentication required',
+        details: 'User not authenticated'
       });
     }
+    
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ 
+        message: 'Authorization failed',
+        details: `User role ${req.user.role} is not authorized to access this route`
+      });
+    }
+    
     next();
   };
 }; 
