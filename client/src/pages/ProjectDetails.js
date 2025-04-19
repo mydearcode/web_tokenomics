@@ -32,11 +32,21 @@ const ProjectDetails = () => {
         setLoading(true);
         console.log('Fetching project with ID:', id);
         
-        // Try to fetch project based on authentication status
         let data;
         if (isAuthenticated) {
-          data = await getProject(id);
+          // Try to fetch as authenticated user first
+          try {
+            data = await getProject(id);
+          } catch (err) {
+            if (err.message === 'Authentication required' || err.message === 'You do not have permission to view this project') {
+              // If auth fails, try public endpoint
+              data = await getPublicProject(id);
+            } else {
+              throw err;
+            }
+          }
         } else {
+          // Try to fetch as public project
           data = await getPublicProject(id);
         }
         
@@ -45,18 +55,7 @@ const ProjectDetails = () => {
         setError(null);
       } catch (err) {
         console.error('Error fetching project:', err);
-        if (err.message === 'Authentication required') {
-          // Try to fetch as public project
-          try {
-            const publicData = await getPublicProject(id);
-            setProject(publicData);
-            setError(null);
-          } catch (publicErr) {
-            setError('This project is private. Please log in to view it.');
-          }
-        } else {
-          setError(err.message);
-        }
+        setError(err.message);
       } finally {
         setLoading(false);
       }

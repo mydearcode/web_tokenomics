@@ -220,7 +220,7 @@ export const getProjects = async () => {
 export const getProject = async (id) => {
   try {
     console.log('Making API call to get project:', id);
-    const response = await api.get(`/projects/${id}`);
+    const response = await api.get(`/api/projects/${id}`);
     console.log('API response:', response);
     return response.data;
   } catch (error) {
