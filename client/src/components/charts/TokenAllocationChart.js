@@ -5,24 +5,10 @@ import {
   ArcElement,
   Tooltip,
   Legend,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
 } from 'chart.js';
 
 // Register ChartJS components
-ChartJS.register(
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title
-);
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const TokenAllocationChart = ({ allocation }) => {
   const data = {
@@ -31,7 +17,7 @@ const TokenAllocationChart = ({ allocation }) => {
     ),
     datasets: [
       {
-        data: Object.values(allocation),
+        data: Object.values(allocation).map(item => item.percentage),
         backgroundColor: [
           '#FF6384',
           '#36A2EB',
@@ -63,9 +49,7 @@ const TokenAllocationChart = ({ allocation }) => {
         callbacks: {
           label: function (context) {
             const label = context.label || '';
-            const value = context.raw || 0;
-            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-            const percentage = ((value / total) * 100).toFixed(1);
+            const percentage = context.raw || 0;
             const amount = Object.values(allocation)[context.dataIndex].amount.toLocaleString();
             return `${label}: ${percentage}% (${amount} tokens)`;
           },

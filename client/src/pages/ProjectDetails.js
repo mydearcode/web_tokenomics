@@ -205,6 +205,16 @@ const ProjectDetails = () => {
             <strong>Created at:</strong> {new Date(project.createdAt).toLocaleDateString()}
           </Typography>
         </Box>
+
+        {project.vesting && (
+          <>
+            <Divider sx={{ my: 3 }} />
+            <Typography variant="h6" gutterBottom>
+              Vesting Schedule
+            </Typography>
+            <VestingScheduleChart project={project} />
+          </>
+        )}
       </Paper>
 
       {project && (
