@@ -12,6 +12,8 @@ import {
   Divider,
   CircularProgress,
   Alert,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -30,6 +32,7 @@ const ProjectDetails = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editedProject, setEditedProject] = useState(null);
   const navigate = useNavigate();
+  const [selectedTab, setSelectedTab] = useState(0);
 
   const fetchProject = async () => {
     try {
@@ -91,6 +94,10 @@ const ProjectDetails = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setSelectedTab(newValue);
   };
 
   if (loading) {
@@ -221,16 +228,23 @@ const ProjectDetails = () => {
         {project.vesting && (
           <>
             <Divider sx={{ my: 3 }} />
-            <Typography variant="h6" gutterBottom>
-              Vesting Schedule
-            </Typography>
-            <VestingScheduleChart project={project} />
-
-            <Box mt={4}>
-              <Typography variant="h5" gutterBottom>
-                Vesting Schedule Details
-              </Typography>
-              <VestingScheduleTable project={project} />
+            <Box sx={{ width: '100%' }}>
+              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs value={selectedTab} onChange={handleTabChange}>
+                  <Tab label="Chart" />
+                  <Tab label="Table" />
+                </Tabs>
+              </Box>
+              <Box sx={{ mt: 2 }}>
+                {selectedTab === 0 && (
+                  <VestingScheduleChart project={project} />
+                )}
+                {selectedTab === 1 && (
+                  <Box sx={{ overflowX: 'auto' }}>
+                    <VestingScheduleTable project={project} />
+                  </Box>
+                )}
+              </Box>
             </Box>
           </>
         )}
