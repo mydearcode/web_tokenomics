@@ -192,19 +192,6 @@ const ProjectDetails = () => {
             <Box sx={{ mb: 4 }}>
               <TokenAllocationChart allocation={project.tokenomics.allocation} />
             </Box>
-            {Object.entries(project.tokenomics.allocation).map(([category, data]) => (
-              <Box key={category} sx={{ mb: 2 }}>
-                <Typography variant="subtitle1">
-                  {category}
-                </Typography>
-                <Typography variant="body1">
-                  <strong>Percentage:</strong> {data.percentage}%
-                </Typography>
-                <Typography variant="body1">
-                  <strong>Amount:</strong> {data.amount.toLocaleString()}
-                </Typography>
-              </Box>
-            ))}
           </Grid>
         </Grid>
 
