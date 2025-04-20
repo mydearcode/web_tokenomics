@@ -33,31 +33,49 @@ const COLORS = [
 ];
 
 const VestingScheduleChart = ({ project }) => {
-  if (!project?.vesting?.categories) return null;
+  if (!project?.vesting) return null;
 
-  const { vesting, tokenomics } = project;
-  const { categories } = vesting;
+  const categories = Object.entries(project.tokenomics.allocation).map(([category, data]) => ({
+    name: category,
+    percentage: data.percentage,
+    amount: data.amount,
+    color: data.color || COLORS[Object.keys(project.tokenomics.allocation).indexOf(category) % COLORS.length],
+  }));
 
   const months = Array.from({ length: 60 }, (_, i) => i + 1);
 
   const calculateVestedAmount = (category, month) => {
-    const { percentage, amount, startMonth, vestingPeriod } = category;
-    const totalAmount = amount || (tokenomics.totalSupply * percentage) / 100;
+    const vesting = project.vesting[category.name];
+    if (!vesting) return 0;
 
-    if (month < startMonth) return 0;
-    if (month >= startMonth + vestingPeriod) return totalAmount;
+    const { tgePercentage, cliffMonths, vestingMonths } = vesting;
+    const totalAmount = category.amount;
 
-    const vestedMonths = month - startMonth;
-    return (totalAmount * vestedMonths) / vestingPeriod;
+    if (month === 0) {
+      return (totalAmount * tgePercentage) / 100;
+    }
+
+    if (month <= cliffMonths) {
+      return (totalAmount * tgePercentage) / 100;
+    }
+
+    const monthsAfterCliff = month - cliffMonths;
+    if (monthsAfterCliff >= vestingMonths) {
+      return totalAmount;
+    }
+
+    const linearVesting = (totalAmount * (100 - tgePercentage)) / 100;
+    const vestedAfterCliff = (linearVesting * monthsAfterCliff) / vestingMonths;
+    return (totalAmount * tgePercentage) / 100 + vestedAfterCliff;
   };
 
   const data = {
     labels: months,
-    datasets: Object.entries(categories).map(([category, details], index) => ({
-      label: `${category} (${details.percentage}%)`,
-      data: months.map(month => calculateVestedAmount(details, month)),
-      borderColor: COLORS[index % COLORS.length],
-      backgroundColor: COLORS[index % COLORS.length],
+    datasets: categories.map(category => ({
+      label: `${category.name} (${category.percentage}%)`,
+      data: months.map(month => calculateVestedAmount(category, month)),
+      borderColor: category.color,
+      backgroundColor: category.color,
       tension: 0.1,
     })),
   };
